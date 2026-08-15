@@ -1,11 +1,12 @@
-import { type Task } from '../types'
+import { type SavedTask } from '../types'
 
 type BoardColor = 'rose' | 'violet' | 'green'
 
 type BoardProps = {
   label: string;
-  tasks: Task[];
+  tasks: SavedTask[];
   color: BoardColor;
+  onDelete: (taskId:string)=>void
 }
 
 const colorStyles: Record<BoardColor, {
@@ -30,7 +31,7 @@ const colorStyles: Record<BoardColor, {
   },
 }
 
-const Board = ({label, tasks, color}:BoardProps) => {
+const Board = ({label, tasks, color, onDelete}:BoardProps) => {
   const styles = colorStyles[color]
 
   return (
@@ -52,12 +53,22 @@ const Board = ({label, tasks, color}:BoardProps) => {
           </div>
         ) : (
           <ul className='h-full space-y-3 overflow-y-auto overscroll-contain px-1 pb-2 pr-2 scrollbar-gutter-stable'>
-            {tasks.map((task,index)=>(
+            {tasks.map((task)=>(
               <li
-                key={`${task.taskName}-${index}`}
-                className='rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md'
+                key={`${task.taskName}-${task.id}`}
+                className='relative rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md'
               >
-                <h3 className='wrap-break-word font-semibold text-slate-900'>
+                <button
+                  onClick={()=>onDelete(task.id)}
+                  type='button'
+                  aria-label={`Delete ${task.taskName}`}
+                  title='Delete task'
+                  className='absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-200'
+                >
+                  <span aria-hidden='true' className='text-lg leading-none'>&times;</span>
+                </button>
+
+                <h3 className='wrap-break-word pr-8 font-semibold text-slate-900'>
                   {task.taskName}
                 </h3>
                 {task.description && (

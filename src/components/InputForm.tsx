@@ -1,14 +1,15 @@
 import React from 'react'
 import { useState } from 'react'
-import { type Task } from '../types'
+import { type TaskDraft, type SavedTask,
+ } from '../types'
 
 type InputFormProps = {
-    onAddTask: (newTask:Task) => void 
+    onAddTask: (newTask:TaskDraft) => void 
 }
 
 
 const InputForm = ({onAddTask}:InputFormProps) => {
-    const [formData, setFormData] = useState<Task>({
+    const [formData, setFormData] = useState<TaskDraft>({
         taskName: '',
         description:''
     })

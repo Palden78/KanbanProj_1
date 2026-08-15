@@ -1,19 +1,39 @@
 import Board from './components/board'
 import InputForm from './components/InputForm'
-import { type Task } from './types'
+import { 
+    type TaskDraft, type SavedTask,
+    type TaskUpdate,
+    type TaskStatus
+ } from './types'
 import { useState } from 'react'
+
+
 
 const App = () => {
 
-  const [tasks, setTasks] = useState<Task[]>([
-
-  ])
-
-  const handleAddTask = (newTask:Task) =>(
+  const [tasks, setTasks] = useState<SavedTask[]>([])
+  const handleAddTask = (newTask:TaskDraft) =>(
     setTasks((prevTasks)=>(
-      [...prevTasks, newTask]
+      [...prevTasks, {...newTask, 
+            id: crypto.randomUUID(),
+            status: "To Do",
+            createdAt: new Date().toISOString()
+          }]
     ))
   )
+
+  const moveTask = (taskId:string, destinationStatus:TaskStatus) =>{
+    setTasks(tasks.map(task => task.id === taskId ? {...task, status:destinationStatus}  : task  ))
+  }
+
+  const editTask = (taskId:string, updatedFields:TaskUpdate) =>{
+    setTasks(tasks.map(task => task.id === taskId? {...task, ...updatedFields
+     } : task))
+  }
+
+  const deleteTask = (taskId:string) =>{
+    setTasks(tasks.filter(task=>task.id !== taskId))
+  }
 
   return (
     <main className='min-h-screen bg-slate-100 px-4 py-10 text-slate-900 sm:px-6 lg:px-8'>
@@ -30,18 +50,27 @@ const App = () => {
 
         <section className='grid grid-cols-3 gap-6'>
           <Board
+            onDelete = {deleteTask}
             label="To Do"
             color="rose"
-            tasks={tasks}
+            tasks={tasks.filter((task)=>(
+              task.status === "To Do"
+            ))}
           />
           <Board
+            onDelete = {deleteTask}
             label="In Progress"
-            tasks={[]}
+            tasks={tasks.filter((task)=>(
+              task.status === "In Progress"
+            ))}
             color="violet"
           />
           <Board
+            onDelete = {deleteTask}
             label="Done"
-            tasks={[]}
+            tasks={tasks.filter((task)=>(
+              task.status === "Done"
+            ))}
             color="green"
           />
         </section>
