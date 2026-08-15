@@ -42,8 +42,8 @@ const InputForm = ({onAddTask}:InputFormProps) => {
     }
 
     return (
-        <form onSubmit={handleSubmit} >
-            <div className="flex flex-col gap-1">
+        <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="flex flex-col gap-2">
                 <label className="text-sm font-semibold text-gray-700">
                     Task Name <span className="text-red-500">*</span>
                 </label>
@@ -52,13 +52,13 @@ const InputForm = ({onAddTask}:InputFormProps) => {
                     name="taskName"
                     value={formData.taskName}
                     onChange={handleChange}
-                    className={`border p-2 rounded ${error ? 'border-red-500' : 'border-gray-300'}`}
+                    className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 ${error ? 'border-red-400 focus:border-red-500 focus:ring-red-100' : 'border-slate-300 focus:border-slate-500 focus:ring-slate-100'}`}
                     placeholder='e.g, build dashboard UI'
                 />
                 {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
             </div>
 
-            <div>
+            <div className="flex flex-col gap-2">
                 <label className="text-sm font-semibold text-gray-700">
                     Description <span className="text-gray-400 text-xs">(Optional)</span>
                 </label>
@@ -67,13 +67,13 @@ const InputForm = ({onAddTask}:InputFormProps) => {
                     value={formData.description}
                     onChange={handleChange}
                     placeholder='Add detailed task notes'
-                    className="border border-gray-300 p-2 rounded h-24 resize-none"
+                    className="h-28 w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-4 focus:ring-slate-100"
                     id=""></textarea>
             </div>
 
             <button type='submit'
 
-            className='w-full bg-amber-400 text-white py-2 px-4 rounded font-medium hover:bg-blue-700 transition"'>
+            className='w-full rounded-lg bg-slate-900 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-slate-700 focus:outline-none focus:ring-4 focus:ring-slate-200'>
                 Create Task
             </button>
         </form>
