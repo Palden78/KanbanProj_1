@@ -140,6 +140,17 @@ const Board = ({label, tasks, color, onDelete, onMove, onEdit}:BoardProps) => {
                   </p>
                 )}
 
+                <time
+                  dateTime={task.createdAt}
+                  title={new Date(task.createdAt).toLocaleString()}
+                  className='mt-3 inline-flex rounded-full bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-500 sm:text-xs'
+                >
+                  Created {new Date(task.createdAt).toLocaleString(undefined, {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  })}
+                </time>
+
                 {/* Replace `hidden` with your edit-mode condition when the logic is ready. */}
                 {editingTaskId === task.id? 
                 <form onSubmit={(e)=> handleSubmitEdit(e,task)} className='mt-3 space-y-2.5 rounded-lg border border-slate-200 bg-slate-50 p-2.5 sm:space-y-3 sm:p-3'>

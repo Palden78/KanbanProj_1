@@ -5,13 +5,29 @@ import {
     type TaskUpdate,
     type TaskStatus
  } from './types'
-import { useState } from 'react'
+import { useState , useEffect} from 'react'
 
 
 
 const App = () => {
 
-  const [tasks, setTasks] = useState<SavedTask[]>([])
+  const [tasks, setTasks] = useState<SavedTask[]>(()=>{
+    const savedTasks = localStorage.getItem('tasks');
+
+    if (!savedTasks){
+      return []
+    }
+    try{
+      return JSON.parse(savedTasks) as SavedTask[]
+    }catch{
+      return []
+    }
+  })
+
+  useEffect(()=>{
+    const jsonArr = JSON.stringify(tasks)
+    localStorage.setItem('tasks', jsonArr)
+  },[tasks])
   const handleAddTask = (newTask:TaskDraft) =>(
     setTasks((prevTasks)=>(
       [...prevTasks, {...newTask, 

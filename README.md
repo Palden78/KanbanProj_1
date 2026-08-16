@@ -17,12 +17,14 @@ A clean, responsive Kanban board for organizing tasks across **To Do**, **In Pro
 - Move tasks forward or backward with simple action buttons
 - Edit task names and descriptions directly from the board
 - Delete tasks that are no longer needed
+- See when each task was created with a timestamp badge
 - View live task counts for each column
+- Keep tasks and their current stages after refreshing or reopening the browser
 - Get clear validation and empty-column messages
 - Use the board comfortably across mobile, tablet, and desktop layouts
 
 > [!NOTE]
-> Tasks are currently stored in memory. Refreshing or closing the page resets the board.
+> Tasks are stored locally in the browser with `localStorage`. They persist across page reloads but are not synchronized between browsers or devices.
 
 ## Tech Stack
 
@@ -48,7 +50,7 @@ Install the following before running the project:
 1. Clone the repository and open the project directory:
 
    ```bash
-   git clone <your-repository-url>
+   git clone https://github.com/Palden78/KanbanProj_1.git
    cd kanban_proj_1
    ```
 
@@ -85,7 +87,9 @@ New tasks begin in **To Do** and can move one stage at a time:
 To Do  ⇄  In Progress  ⇄  Done
 ```
 
-Each card provides controls appropriate to its current stage. Movement uses buttons rather than drag and drop, keeping the workflow simple and accessible.
+Each card provides controls appropriate to its current stage and displays its creation timestamp. Movement uses buttons rather than drag and drop, keeping the workflow simple and accessible.
+
+Task data is serialized to `localStorage` whenever the board changes. When the application starts, it restores the saved tasks—including their current workflow stages—from the same storage key.
 
 ## Project Structure
 
@@ -97,7 +101,7 @@ kanban_proj_1/
 │   ├── components/
 │   │   ├── InputForm.tsx    # Task creation form and validation
 │   │   └── board.tsx        # Board columns, cards, and task controls
-│   ├── App.tsx              # Main layout and task state management
+│   ├── App.tsx              # Task state, operations, and local persistence
 │   ├── index.css            # Tailwind CSS entry point
 │   ├── main.tsx             # React application entry point
 │   └── types.ts             # Shared task and status types
@@ -111,7 +115,7 @@ kanban_proj_1/
 
 This project intentionally keeps its scope focused. It currently does not include:
 
-- Persistent storage or a backend API
+- Cloud storage, backend synchronization, or cross-device access
 - Drag-and-drop task movement
 - Search, filtering, priorities, or due dates
 - User accounts, authentication, or shared boards
@@ -121,7 +125,7 @@ These areas are natural opportunities for future development.
 
 ## Possible Improvements
 
-- Save tasks with local storage or a database
+- Add a backend database and synchronize tasks across devices
 - Add drag-and-drop interactions
 - Add task priorities, labels, and due dates
 - Support search and filtering
