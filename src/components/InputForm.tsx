@@ -1,6 +1,6 @@
 import React from 'react'
 import { useState } from 'react'
-import { type TaskDraft, type SavedTask,
+import { type TaskDraft
  } from '../types'
 
 type InputFormProps = {

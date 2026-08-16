@@ -51,6 +51,8 @@ const App = () => {
         <section className='grid grid-cols-3 gap-6'>
           <Board
             onDelete = {deleteTask}
+            onEdit={editTask}
+            onMove={moveTask}
             label="To Do"
             color="rose"
             tasks={tasks.filter((task)=>(
@@ -59,6 +61,8 @@ const App = () => {
           />
           <Board
             onDelete = {deleteTask}
+            onEdit={editTask}
+            onMove={moveTask}
             label="In Progress"
             tasks={tasks.filter((task)=>(
               task.status === "In Progress"
@@ -66,7 +70,9 @@ const App = () => {
             color="violet"
           />
           <Board
+            onEdit={editTask}
             onDelete = {deleteTask}
+            onMove={moveTask}
             label="Done"
             tasks={tasks.filter((task)=>(
               task.status === "Done"
