@@ -36,19 +36,19 @@ const App = () => {
   }
 
   return (
-    <main className='min-h-screen bg-slate-100 px-4 py-10 text-slate-900 sm:px-6 lg:px-8'>
+    <main className='min-h-screen bg-slate-100 px-3 py-6 text-slate-900 sm:px-6 sm:py-8 lg:px-8 lg:py-10'>
       <div className='mx-auto max-w-7xl'>
-        <header className='mb-8'>
-          <p className='mb-2 text-sm font-semibold uppercase tracking-widest text-slate-500'>
+        <header className='mb-6 sm:mb-8'>
+          <p className='mb-2 text-xs font-semibold uppercase tracking-widest text-slate-500 sm:text-sm'>
             Workspace
           </p>
-          <h1 className='text-3xl font-bold tracking-tight sm:text-4xl'>Kanban Board</h1>
-          <p className='mt-2 text-sm text-slate-600 sm:text-base'>
+          <h1 className='text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl'>Kanban Board</h1>
+          <p className='mt-2 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base'>
             Keep track of your tasks as they move through each stage.
           </p>
         </header>
 
-        <section className='grid grid-cols-3 gap-6'>
+        <section className='grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5 lg:grid-cols-3 lg:gap-6'>
           <Board
             onDelete = {deleteTask}
             onEdit={editTask}
@@ -81,9 +81,9 @@ const App = () => {
           />
         </section>
 
-        <section className='mx-auto mt-8 max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm'>
+        <section className='mx-auto mt-6 max-w-xl rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:mt-8 sm:rounded-2xl sm:p-6'>
           <div className='mb-5'>
-            <h2 className='text-xl font-semibold'>Create a task</h2>
+            <h2 className='text-lg font-semibold sm:text-xl'>Create a task</h2>
             <p className='mt-1 text-sm text-slate-500'>Add a new item to your To Do board.</p>
           </div>
           <InputForm onAddTask={handleAddTask}/>

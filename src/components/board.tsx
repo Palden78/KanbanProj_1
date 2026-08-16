@@ -86,36 +86,36 @@ const Board = ({label, tasks, color, onDelete, onMove, onEdit}:BoardProps) => {
     }
 
   return (
-    <section className={`flex h-136 min-h-0 flex-col overflow-hidden rounded-2xl border shadow-sm ${styles.container}`}>
-      <header className='flex items-center justify-between border-b border-slate-900/5 px-5 py-4'>
-        <div className='flex items-center gap-3'>
+    <section className={`flex h-112 min-h-0 flex-col overflow-hidden rounded-xl border shadow-sm sm:h-120 sm:rounded-2xl lg:h-136 ${styles.container}`}>
+      <header className='flex items-center justify-between border-b border-slate-900/5 px-4 py-3 sm:px-5 sm:py-4'>
+        <div className='flex items-center gap-2.5 sm:gap-3'>
           <span className={`h-2.5 w-2.5 rounded-full ${styles.dot}`} />
-          <h2 className='font-semibold text-slate-900'>{label}</h2>
+          <h2 className='text-sm font-semibold text-slate-900 sm:text-base'>{label}</h2>
         </div>
-        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles.badge}`}>
+        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold sm:px-2.5 sm:py-1 sm:text-xs ${styles.badge}`}>
           {tasks.length}
         </span>
       </header>
 
-      <div className='min-h-0 flex-1 p-3'>
+      <div className='min-h-0 flex-1 p-2 sm:p-3'>
         {tasks.length === 0 ? (
-          <div className='flex h-full items-center justify-center rounded-xl border border-dashed border-slate-300/80 bg-white/40 px-6 text-center'>
-            <p className='text-sm text-slate-500'>No tasks yet</p>
+          <div className='flex h-full items-center justify-center rounded-lg border border-dashed border-slate-300/80 bg-white/40 px-4 text-center sm:rounded-xl sm:px-6'>
+            <p className='text-xs text-slate-500 sm:text-sm'>No tasks yet</p>
           </div>
         ) : (
-          <ul className='h-full space-y-3 overflow-y-auto overscroll-contain px-1 pb-2 pr-2 scrollbar-gutter-stable'>
+          <ul className='h-full space-y-2.5 overflow-y-auto overscroll-contain px-0.5 pb-2 pr-1.5 scrollbar-gutter-stable sm:space-y-3 sm:px-1 sm:pr-2'>
             {tasks.map((task)=>(
               <li
                 key={`${task.taskName}-${task.id}`}
-                className='relative rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md'
+                className='relative rounded-lg border border-slate-200/80 bg-white p-3 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:rounded-xl sm:p-4'
               >
-                <div className='absolute right-3 top-3 flex items-center gap-1'>
+                <div className='absolute right-2 top-2 flex items-center gap-0.5 sm:right-3 sm:top-3 sm:gap-1'>
                   <button
                     onClick={()=>handleEditClick(task)}
                     type='button'
                     aria-label={`Edit ${task.taskName}`}
                     title='Edit task'
-                    className='rounded-md px-2 py-1 text-xs font-semibold text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-200'
+                    className='rounded-md px-1.5 py-1 text-[11px] font-semibold text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-200 sm:px-2 sm:text-xs'
                   >
                     Edit
                   </button>
@@ -125,24 +125,24 @@ const Board = ({label, tasks, color, onDelete, onMove, onEdit}:BoardProps) => {
                     type='button'
                     aria-label={`Delete ${task.taskName}`}
                     title='Delete task'
-                    className='flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-200'
+                    className='flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-200 sm:h-7 sm:w-7'
                   >
                     <span aria-hidden='true' className='text-lg leading-none'>&times;</span>
                   </button>
                 </div>
 
-                <h3 className='wrap-break-word pr-24 font-semibold text-slate-900'>
+                <h3 className='wrap-break-word pr-20 text-sm font-semibold text-slate-900 sm:pr-24 sm:text-base'>
                   {task.taskName}
                 </h3>
                 {task.description && (
-                  <p className='mt-2 wrap-break-word text-sm leading-relaxed text-slate-600'>
+                  <p className='mt-1.5 wrap-break-word text-xs leading-relaxed text-slate-600 sm:mt-2 sm:text-sm'>
                     {task.description}
                   </p>
                 )}
 
                 {/* Replace `hidden` with your edit-mode condition when the logic is ready. */}
                 {editingTaskId === task.id? 
-                <form onSubmit={(e)=> handleSubmitEdit(e,task)} className='mt-3 space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3'>
+                <form onSubmit={(e)=> handleSubmitEdit(e,task)} className='mt-3 space-y-2.5 rounded-lg border border-slate-200 bg-slate-50 p-2.5 sm:space-y-3 sm:p-3'>
                   <div className='space-y-1.5'>
                     <label
                       htmlFor={`edit-title-${task.id}`}
@@ -156,7 +156,7 @@ const Board = ({label, tasks, color, onDelete, onMove, onEdit}:BoardProps) => {
                       type='text'
                       onChange={handleChange}
                       defaultValue={task.taskName}
-                      className='w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200'
+                      className='w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 sm:text-sm'
                     />
                     {error && <p role='alert' className='text-xs font-medium text-red-600'>
                       {error}
@@ -177,21 +177,21 @@ const Board = ({label, tasks, color, onDelete, onMove, onEdit}:BoardProps) => {
                       name='description'
                       defaultValue={task.description}
                       rows={3}
-                      className='w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200'
+                      className='w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-base text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 sm:text-sm'
                     />
                   </div>
 
-                  <div className='flex justify-end gap-2 pt-1'>
+                  <div className='flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end'>
                     <button
                       onClick={cancel}
                       type='button'
-                      className='rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-200'
+                      className='w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-200 sm:w-auto sm:py-1.5'
                     >
                       Cancel
                     </button>
                     <button
                       type='submit'
-                      className='rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-300'
+                      className='w-full rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-300 sm:w-auto sm:py-1.5'
                     >
                       Save changes
                     </button>
@@ -199,12 +199,12 @@ const Board = ({label, tasks, color, onDelete, onMove, onEdit}:BoardProps) => {
                 </form>:<></>}
                 
 
-                <div className='mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-3'>
+                <div className='mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 sm:mt-4 sm:gap-3'>
                     {task.status === "To Do" ? (
                         <button
                             onClick={()=> onMove(task.id, "In Progress")}
                             type="button"
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                            className="inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-2.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-300 sm:flex-none sm:px-3 sm:py-1.5"
                         >
                             Next
                             <span aria-hidden="true">&rarr;</span>
@@ -214,7 +214,7 @@ const Board = ({label, tasks, color, onDelete, onMove, onEdit}:BoardProps) => {
                             <button
                                 onClick={()=> onMove(task.id, "Done")}
                                 type="button"
-                                className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                className="inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-2.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-300 sm:flex-none sm:px-3 sm:py-1.5"
                             >
                                 Next
                                 <span aria-hidden="true">&rarr;</span>
@@ -223,7 +223,7 @@ const Board = ({label, tasks, color, onDelete, onMove, onEdit}:BoardProps) => {
                             <button
                                 onClick={()=> onMove(task.id, "To Do")}
                                 type="button"
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                                className="inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200 sm:flex-none sm:px-3 sm:py-1.5"
                             >
                                 <span aria-hidden="true">&larr;</span>
                                 Previous
@@ -233,7 +233,7 @@ const Board = ({label, tasks, color, onDelete, onMove, onEdit}:BoardProps) => {
                         <button
                             onClick={()=> onMove(task.id, "In Progress")}
                             type="button"
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                            className="inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200 sm:flex-none sm:px-3 sm:py-1.5"
                         >
                             <span aria-hidden="true">&larr;</span>
                             Previous
