@@ -5,7 +5,7 @@ import { type TaskStatus, type TaskUpdate, type TaskDraft } from '../types';
 type BoardColor = 'rose' | 'violet' | 'green'
 
 type BoardProps = {
-  label: string;
+  label: TaskStatus;
   tasks: SavedTask[];
   color: BoardColor;
   onDelete: (taskId:string)=>void
@@ -85,6 +85,32 @@ const Board = ({label, tasks, color, onDelete, onMove, onEdit}:BoardProps) => {
         setError('')
     }
 
+    const handleDragStart = (e:React.DragEvent<HTMLLIElement>, taskStatus:string, taskid:string)=>{
+        e.dataTransfer.setData('text', e.currentTarget.id)
+        e.dataTransfer.setData('taskStatus', taskStatus )
+        e.dataTransfer.setData('taskid', taskid )
+    }
+
+    const enableDropping = (e:React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault()
+    }
+
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>)=>{
+        const id = e.dataTransfer.getData('text')
+        const taskStatus = e.dataTransfer.getData('taskStatus')
+        const taskid = e.dataTransfer.getData('taskid')
+        
+
+        const taskDest = label 
+
+        if (taskStatus === taskDest){
+            return 
+        }
+        console.log(`dropped element with id ${id}`)
+
+        onMove(taskid, taskDest)
+    }
+
   return (
     <section className={`flex h-112 min-h-0 flex-col overflow-hidden rounded-xl border shadow-sm sm:h-120 sm:rounded-2xl lg:h-136 ${styles.container}`}>
       <header className='flex items-center justify-between border-b border-slate-900/5 px-4 py-3 sm:px-5 sm:py-4'>
@@ -97,15 +123,16 @@ const Board = ({label, tasks, color, onDelete, onMove, onEdit}:BoardProps) => {
         </span>
       </header>
 
-      <div className='min-h-0 flex-1 p-2 sm:p-3'>
+      <div className='min-h-0 flex-1 p-2 sm:p-3' onDragOver={enableDropping} onDrop={handleDrop}>
         {tasks.length === 0 ? (
           <div className='flex h-full items-center justify-center rounded-lg border border-dashed border-slate-300/80 bg-white/40 px-4 text-center sm:rounded-xl sm:px-6'>
             <p className='text-xs text-slate-500 sm:text-sm'>No tasks yet</p>
           </div>
         ) : (
-          <ul className='h-full space-y-2.5 overflow-y-auto overscroll-contain px-0.5 pb-2 pr-1.5 scrollbar-gutter-stable sm:space-y-3 sm:px-1 sm:pr-2'>
+          <ul  className='h-full space-y-2.5 overflow-y-auto overscroll-contain px-0.5 pb-2 pr-1.5 scrollbar-gutter-stable sm:space-y-3 sm:px-1 sm:pr-2'>
             {tasks.map((task)=>(
-              <li
+              <li draggable="true"
+                onDragStart={(e)=>handleDragStart(e, task.status, task.id)}
                 key={`${task.taskName}-${task.id}`}
                 className='relative rounded-lg border border-slate-200/80 bg-white p-3 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:rounded-xl sm:p-4'
               >
