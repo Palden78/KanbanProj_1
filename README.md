@@ -1,6 +1,6 @@
 # Kanban Task Board
 
-A responsive full-stack Kanban project for organizing tasks across **To Do**, **In Progress**, and **Done**. The React frontend is functional and persists tasks in the browser, while an independent FastAPI backend is currently being developed and tested before integration.
+A responsive full-stack Kanban project for organizing tasks across **To Do**, **In Progress**, and **Done**. The React frontend is functional and persists tasks in the browser. A separate FastAPI backend now provides in-memory task CRUD endpoints and is being tested independently before frontend integration and PostgreSQL persistence.
 
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
@@ -15,13 +15,15 @@ A responsive full-stack Kanban project for organizing tasks across **To Do**, **
 | --- | --- |
 | Frontend | Functional |
 | Browser persistence | Functional with `localStorage` |
-| Drag and drop | Functional for moving tasks between columns |
-| FastAPI backend | Initial development |
+| Drag and drop | Functional between columns |
+| FastAPI task API | In-memory CRUD implemented |
+| User API and task ownership | Planned next |
+| PostgreSQL persistence | Planned |
 | Frontend/backend integration | Not started |
 | Automated testing | Not implemented |
 
 > [!IMPORTANT]
-> The frontend and backend currently run as independent applications. Kanban tasks are still managed entirely by the frontend; the FastAPI service does not yet provide task CRUD operations or database persistence.
+> The frontend and backend currently run independently. The frontend still uses browser `localStorage`, while the backend stores tasks in process memory. Restarting the FastAPI server clears its task collection.
 
 ## Implemented Frontend Features
 
@@ -46,6 +48,20 @@ The board uses the browser's native HTML drag-and-drop API:
 - Within-column reordering is not currently supported.
 - Native dragging may be limited on touch devices.
 
+## Implemented Backend Features
+
+- FastAPI application with generated OpenAPI documentation
+- Pydantic task creation, saved-task, and partial-update models
+- Three validated task statuses: **To Do**, **In Progress**, and **Done**
+- Server-generated UUID task IDs
+- Server-generated UTC creation timestamps
+- In-memory task storage keyed by task ID
+- Create, list, retrieve, update, move, and delete operations
+- `404 Not Found` responses for unknown task IDs
+- Request validation through FastAPI and Pydantic
+
+The backend is currently intended for independent API development and manual testing with Postman. It is not yet consumed by the React application.
+
 ## Technology Stack
 
 ### Frontend
@@ -53,7 +69,7 @@ The board uses the browser's native HTML drag-and-drop API:
 | Technology | Purpose |
 | --- | --- |
 | [React](https://react.dev/) | Component-based user interface |
-| [TypeScript](https://www.typescriptlang.org/) | Static typing and shared task models |
+| [TypeScript](https://www.typescriptlang.org/) | Static typing and task models |
 | [Vite](https://vite.dev/) | Development server and production builds |
 | [Tailwind CSS](https://tailwindcss.com/) | Responsive, utility-first styling |
 | [ESLint](https://eslint.org/) | Code-quality checks |
@@ -63,33 +79,38 @@ The board uses the browser's native HTML drag-and-drop API:
 | Technology | Purpose |
 | --- | --- |
 | [FastAPI](https://fastapi.tiangolo.com/) | HTTP API framework |
-| [Pydantic](https://docs.pydantic.dev/) | Request and response validation |
+| [Pydantic](https://docs.pydantic.dev/) | Request validation and data models |
 | [Uvicorn](https://www.uvicorn.org/) | ASGI development server |
 | Python | Backend runtime |
+| PostgreSQL | Planned durable database |
 
 ## Project Structure
 
 ```text
 KanbanProj_1/
 ├── frontend/
-│   ├── public/                  # Static public assets
+│   ├── public/                     # Static public assets
 │   ├── src/
-│   │   ├── assets/              # Image and SVG assets
+│   │   ├── assets/                 # Image and SVG assets
 │   │   ├── components/
-│   │   │   ├── InputForm.tsx    # Task creation form
-│   │   │   └── board.tsx        # Columns, cards, controls, and drag/drop
-│   │   ├── App.tsx              # Task operations and local persistence
-│   │   ├── index.css            # Tailwind CSS entry point
-│   │   ├── main.tsx             # React application entry point
-│   │   └── types.ts             # Shared frontend task types
+│   │   │   ├── InputForm.tsx       # Task creation form
+│   │   │   └── board.tsx           # Columns, cards, controls, and drag/drop
+│   │   ├── App.tsx                 # Task operations and local persistence
+│   │   ├── index.css               # Tailwind CSS entry point
+│   │   ├── main.tsx                # React application entry point
+│   │   └── types.ts                # Shared frontend task types
 │   ├── package.json
 │   └── vite.config.ts
 ├── backend/
 │   ├── controllers/
-│   │   └── controllers.py       # Planned API controller layer
+│   │   ├── taskController.py       # Task HTTP routes
+│   │   └── userController.py       # User API scaffold
 │   ├── models/
-│   │   └── models.py            # Planned task model layer
-│   └── main.py                  # FastAPI application entry point
+│   │   └── models.py               # Pydantic task models
+│   ├── services/
+│   │   └── taskService.py          # In-memory task operations
+│   ├── inMemoryTasks.py            # Temporary task collection
+│   └── main.py                     # FastAPI application entry point
 ├── .gitignore
 └── README.md
 ```
@@ -102,6 +123,7 @@ KanbanProj_1/
 - [Node.js](https://nodejs.org/) 22.13 or newer
 - npm
 - Python with virtual-environment support—the backend is currently developed with Python 3.14
+- [Postman](https://www.postman.com/) or another HTTP client for manual API testing
 
 ### Clone the Repository
 
@@ -133,7 +155,7 @@ Open the URL printed by Vite, usually [http://localhost:5173](http://localhost:5
 
 ## Running the Backend
 
-The backend dependency manifest has not been added yet, so the following is a provisional development setup.
+The backend dependency manifest has not been added yet, so the following remains a provisional development setup.
 
 From the repository root:
 
@@ -145,7 +167,7 @@ python -m pip install "fastapi[standard]"
 fastapi dev main.py
 ```
 
-Alternatively, start the application directly with Uvicorn:
+Alternatively, start the application with Uvicorn:
 
 ```bash
 python -m uvicorn main:app --reload
@@ -153,29 +175,76 @@ python -m uvicorn main:app --reload
 
 The API normally runs at [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
-FastAPI also provides generated documentation:
+FastAPI provides generated documentation at:
 
 - Swagger UI: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - ReDoc: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
 - OpenAPI schema: [http://127.0.0.1:8000/openapi.json](http://127.0.0.1:8000/openapi.json)
 
-### Current API
+## Current API
 
-The backend currently provides only a smoke-test endpoint:
+### Health Check
 
-| Method | Endpoint | Response |
+| Method | Endpoint | Purpose |
 | --- | --- | --- |
-| `GET` | `/` | `{"Hello":"World"}` |
+| `GET` | `/` | Return the FastAPI smoke-test response |
 
-Example Postman request:
+### Tasks
 
-```text
-GET http://127.0.0.1:8000/
+| Method | Endpoint | Success | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/tasks/` | `200 OK` | Retrieve all tasks |
+| `POST` | `/tasks/` | `201 Created` | Create a task |
+| `GET` | `/tasks/{task_id}` | `200 OK` | Retrieve one task |
+| `PATCH` | `/tasks/{task_id}` | `200 OK` | Edit a task or move it to another column |
+| `DELETE` | `/tasks/{task_id}` | `204 No Content` | Delete a task |
+
+Unknown task IDs return `404 Not Found` for single-task operations.
+
+### Task Data Shape
+
+A created task resembles:
+
+```json
+{
+  "taskName": "Build the task API",
+  "description": "Implement and test CRUD operations",
+  "id": "3156dedf-5fc4-45bb-9a73-52b2882a2d7e",
+  "status": "To Do",
+  "createdAt": "2026-08-19T08:26:25.057339+00:00"
+}
 ```
 
-Task creation, retrieval, updates, movement, deletion, and database storage have not yet been implemented in the API.
+The server owns the `id`, initial status, and creation timestamp. A partial update can change the name, description, or status:
 
-## Current Data Flow
+```json
+{
+  "status": "In Progress"
+}
+```
+
+## Testing with Postman
+
+Suggested local base URL:
+
+```text
+http://localhost:8000
+```
+
+A basic task lifecycle is:
+
+1. `POST /tasks/` to create a task.
+2. `GET /tasks/` to verify it appears in the collection.
+3. `GET /tasks/{task_id}` to retrieve it by ID.
+4. `PATCH /tasks/{task_id}` to edit it or change its column.
+5. `DELETE /tasks/{task_id}` to remove it.
+6. Repeat the GET-by-ID request and expect `404 Not Found`.
+
+Because storage is currently in memory, restarting Uvicorn resets this collection.
+
+## Current Data Flows
+
+### Frontend
 
 ```text
 User action
@@ -185,40 +254,59 @@ React state
 Browser localStorage
 ```
 
-The frontend reads tasks from the `tasks` storage key when it starts and writes the complete task list whenever state changes.
+Frontend task data survives page reloads for the same browser profile and origin, but it is not synchronized across users or devices.
 
-This means task data:
+### Backend
 
-- Survives page reloads and browser restarts
-- Remains limited to the same browser profile and origin
-- Is removed when the site's browser storage is cleared
-- Is not synchronized between users, browsers, or devices
-
-## Planned API Contract
-
-The backend is expected to manage tasks with this general response shape:
-
-```json
-{
-  "id": "generated-uuid",
-  "taskName": "Build the task API",
-  "description": "Implement and test CRUD operations",
-  "status": "To Do",
-  "createdAt": "2026-08-17T14:30:00Z"
-}
+```text
+Postman / HTTP client
+    ↓
+FastAPI task controller
+    ↓
+Task service
+    ↓
+In-memory task dictionary
 ```
 
-Planned task endpoints:
+Backend task data survives multiple requests while the server process remains active, but it is lost when the server restarts.
 
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| `GET` | `/tasks` | Retrieve all tasks |
-| `POST` | `/tasks` | Create a task |
-| `GET` | `/tasks/{task_id}` | Retrieve one task |
-| `PATCH` | `/tasks/{task_id}` | Edit or move a task |
-| `DELETE` | `/tasks/{task_id}` | Delete a task |
+## Planned User Ownership
 
-These routes are part of the roadmap and are **not implemented yet**.
+The next domain milestone is a one-to-many relationship:
+
+```text
+One User ───── owns ───── Many Tasks
+Each Task ─── belongs to ─── One User
+```
+
+Planned work includes:
+
+- Pydantic user create, update, and response models
+- In-memory user CRUD endpoints
+- A required `userId` on each task
+- Validation that a task owner exists before task creation
+- Retrieval of all tasks owned by a specific user
+- Duplicate-email protection
+- A defined policy for deleting users who still own tasks
+
+User routes and task ownership are not implemented yet.
+
+## PostgreSQL Goal
+
+After the in-memory API and ownership rules are stable and tested, temporary dictionaries will be replaced with PostgreSQL-backed persistence through a Python PostgreSQL client.
+
+The intended relational shape is:
+
+```text
+users
+  id              PRIMARY KEY
+
+ tasks
+  id              PRIMARY KEY
+  user_id         NOT NULL, FOREIGN KEY → users.id
+```
+
+Database selection details, schema migrations, connection pooling, and environment configuration are intentionally deferred until the in-memory API behavior is complete.
 
 ## Roadmap
 
@@ -228,10 +316,15 @@ These routes are part of the roadmap and are **not implemented yet**.
 - [x] Add browser persistence
 - [x] Add cross-column drag and drop
 - [x] Initialize the FastAPI service
+- [x] Define Pydantic task schemas
+- [x] Add in-memory task storage
+- [x] Implement task create and retrieval endpoints
+- [x] Implement task update, movement, and deletion endpoints
+- [ ] Complete full Postman regression testing for task CRUD
 - [ ] Add a reproducible backend dependency manifest
-- [ ] Define validated Pydantic task schemas
-- [ ] Implement and test task CRUD endpoints
-- [ ] Add backend persistence with a database
+- [ ] Define user schemas and implement in-memory user CRUD
+- [ ] Add required one-to-many task ownership
+- [ ] Add backend persistence with PostgreSQL
 - [ ] Add automated frontend and backend tests
 - [ ] Configure CORS and an API base URL
 - [ ] Connect the React frontend to FastAPI
@@ -239,12 +332,15 @@ These routes are part of the roadmap and are **not implemented yet**.
 
 ## Current Limitations
 
-- The backend is not connected to the frontend.
-- The backend does not yet manage or persist tasks.
-- No authentication, accounts, or collaborative boards are available.
-- Drag and drop does not support touch reliably or reorder tasks within a column.
+- The frontend is not connected to the backend.
+- Frontend and backend currently maintain separate task collections.
+- Backend data is lost whenever the server restarts.
+- User records and task ownership are not implemented yet.
+- PostgreSQL persistence has not been added.
+- No authentication, authorization, or collaborative boards are available.
+- Drag and drop does not reliably support touch or reorder tasks within a column.
 - Search, filters, priorities, labels, and due dates are not implemented.
-- Deletion has no confirmation or undo action.
+- Frontend deletion has no confirmation or undo action.
 - There are no automated tests or deployment configuration.
 
 ## Contributing
