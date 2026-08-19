@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from models.models import TaskDraft as td
 from services.taskService import createTask as createNewTask
 from services.taskService import getAllTasks, getTaskById
@@ -16,6 +16,8 @@ async def get_tasks():
 @Taskrouter.get("/{task_id}")
 async def getByID(task_id:str):
     task = await getTaskById(task_id)
+    if task is None:
+        raise HTTPException(status_code = 404, detail="Task not found")
     return task 
 
 @Taskrouter.post("/", status_code = 201)

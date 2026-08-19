@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from inMemoryTasks import tasks
 
 async def createTask(task:td):
-    taskID = uuid.uuid4()
+    taskID = str(uuid.uuid4())
     status = "To Do"
     timestamp = (datetime.now(timezone.utc)).isoformat()
 
@@ -19,7 +19,7 @@ async def createTask(task:td):
     return newTask 
 
 async def getAllTasks():
-    return tasks
+    return list(tasks.values())
 
 async def getTaskById(id):
-    return tasks[id]
+    return tasks.get(id)
