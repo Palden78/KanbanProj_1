@@ -16,6 +16,7 @@ class SavedTask(TaskDraft):
 class TaskUpdate(BaseModel):
     taskName: Optional[str] = None 
     description: Optional[str] = None 
+    status: Optional[TaskStatus] = None
 
 
 
