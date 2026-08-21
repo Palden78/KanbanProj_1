@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 from services.userService import getAllUsers, createNewUser, getUserBYID,updateUserbyID, deleteUserBYID
 from models.userModels import UserCreate, UserUpdate
 
@@ -48,5 +48,4 @@ async def deleteByID(user_id:str):
     if res == "User not found":
         raise HTTPException(status_code=404, detail="User not found, could not delete user")
 
-
-    return res 
+    return Response(status_code = 204)

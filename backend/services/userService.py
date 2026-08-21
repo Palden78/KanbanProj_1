@@ -45,6 +45,7 @@ async def updateUserbyID(userID: str, updateDetails:UserUpdate ):
     update_user_data = updateDetails.model_dump(exclude_unset=True)
 
     for k,v in update_user_data.items():
+        # Uses setattr() to bypass 'does not support item assignment'
         setattr(user, k, v)
 
     users[userID] = user 
