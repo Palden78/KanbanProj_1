@@ -40,16 +40,16 @@ async def updateUserbyID(userID: str, updateDetails:UserUpdate ):
     user = users.get(userID)
 
     if user is None:
-        return user 
+        return None 
 
     update_user_data = updateDetails.model_dump(exclude_unset=True)
 
     for k,v in update_user_data.items():
-        user[k] = v
+        setattr(user, k, v)
 
     users[userID] = user 
 
-    return {"message": "User updated successfully"}
+    return {"message": "User updated successfully" ,"data":user}
 
 
 async def deleteUserBYID(user_id:str):

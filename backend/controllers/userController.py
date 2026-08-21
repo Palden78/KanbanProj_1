@@ -34,7 +34,7 @@ async def getUserByID(user_id:str):
 
 @Userrouter.patch("/{user_id}", status_code=200)
 async def updateByID(user_id:str, userUpdateDetails: UserUpdate):
-    res = await updateUserbyID(user_id)
+    res = await updateUserbyID(user_id, userUpdateDetails)
 
     if res is None:
         raise HTTPException(status_code=404, detail="Could not update user, user not found")
