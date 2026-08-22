@@ -3,6 +3,7 @@ from models.userModels import UserCreate, UserUpdate, SavedUser
 import uuid
 from datetime import datetime,timezone
 from pydantic import ValidationError, TypeAdapter, EmailStr
+from core.security import hash_password
 
 EMAIL_ADAPTER = TypeAdapter(EmailStr)
 async def getAllUsers():
@@ -11,11 +12,14 @@ async def getAllUsers():
 async def createNewUser(newUser:UserCreate):
     newId = str(uuid.uuid4())
     TimecreatedAt = (datetime.now(timezone.utc)).isoformat()
+    hashedPassword = hash_password(newUser.password.get_secret_value())
 
     try:
-        newUserCreated = SavedUser(username= newUser.username,
+        newUserCreated = SavedUser(
+                            username= newUser.username,
                             email = newUser.email,
                             id= newId,
+                            password_hash = hashedPassword,
                             createdAt = TimecreatedAt)
 
         #TO DO Remove when database is integrated
