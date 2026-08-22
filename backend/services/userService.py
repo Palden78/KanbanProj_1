@@ -2,8 +2,9 @@ from inMemoryUsers import users
 from models.userModels import UserCreate, UserUpdate, SavedUser
 import uuid
 from datetime import datetime,timezone
-from pydantic import ValidationError
+from pydantic import ValidationError, TypeAdapter, EmailStr
 
+EMAIL_ADAPTER = TypeAdapter(EmailStr)
 async def getAllUsers():
     return list(users.values())
 
@@ -30,8 +31,6 @@ async def createNewUser(newUser:UserCreate):
 
         return "Invalid email format"
 
-    
-
 async def getUserBYID(userID:str):
     return users.get(userID)
 
@@ -42,7 +41,22 @@ async def updateUserbyID(userID: str, updateDetails:UserUpdate ):
     if user is None:
         return None 
 
-    update_user_data = updateDetails.model_dump(exclude_unset=True)
+    update_user_data:UserUpdate = updateDetails.model_dump(exclude_unset=True)
+
+    if update_user_data["username"] == "":
+        return "Blank username"
+
+    
+    new_email = update_user_data.get("email")
+    if new_email and  any(  user.email == new_email for user in users.values()):
+        return "Duplicate email"
+
+    if "email" in update_user_data:
+        try:
+            validated_email = EMAIL_ADAPTER.validate_python(update_user_data["email"])
+            update_user_data["email"] = validated_email
+        except ValidationError as e:
+            return "Invalid Email"
 
     for k,v in update_user_data.items():
         # Uses setattr() to bypass 'does not support item assignment'
