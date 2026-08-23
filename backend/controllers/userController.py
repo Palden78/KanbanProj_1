@@ -36,8 +36,15 @@ async def getUserByID(user_id:str):
 async def updateByID(user_id:str, userUpdateDetails: UserUpdate):
     res = await updateUserbyID(user_id, userUpdateDetails)
 
-    if res is None:
-        raise HTTPException(status_code=404, detail="Could not update user, user not found")
+    match res:
+        case None:
+            raise HTTPException(status_code=404, detail="Could not update user, user not found")
+        case "Blank username":
+            raise HTTPException(status_code=422, detail="Username cannot be null or blank")
+        case "Null email":
+            raise HTTPException(status_code=422, detail="Email cannot be null")
+        case "Duplicate email":
+            raise HTTPException(status_code=409, detail="A user with this email address already exists")
 
     return res
 

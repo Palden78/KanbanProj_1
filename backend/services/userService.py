@@ -54,20 +54,27 @@ async def updateUserbyID(userID: str, updateDetails:UserUpdate ):
 
     update_user_data:UserUpdate = updateDetails.model_dump(exclude_unset=True)
 
-    if update_user_data["username"] == "":
-        return "Blank username"
-
-    
-    new_email = update_user_data.get("email")
-    if new_email and  any(  user.email == new_email for user in users.values()):
-        return "Duplicate email"
+    if "username" in update_user_data:
+        val = update_user_data["username"] 
+        if val is None or not str(val).strip():
+            return "Blank username"
 
     if "email" in update_user_data:
-        try:
-            validated_email = EMAIL_ADAPTER.validate_python(update_user_data["email"])
-            update_user_data["email"] = validated_email
-        except ValidationError as e:
-            return "Invalid Email"
+        new_email = update_user_data.get("email")
+
+        if new_email is None or not str(new_email).strip():
+            return "Null email"
+
+        new_email_str = str(new_email).lower()
+
+        for uid, existing_user in users.items():
+            existing_email = (
+                existing_user.email if hasattr(existing_user, "email") else existing_user.get("email","")
+            )
+            if uid != userID and existing_email.lower() == new_email_str:
+                return "Duplicate email"
+
+        update_user_data["email"] = new_email_str
 
     for k,v in update_user_data.items():
         # Uses setattr() to bypass 'does not support item assignment'
