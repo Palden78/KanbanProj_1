@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from services.authService import loginService
 
 
 LoginRouter = APIRouter(
@@ -8,4 +9,5 @@ LoginRouter = APIRouter(
 
 @LoginRouter.post("/login",status_code=201)
 async def loginUser():
+    res = await loginService()
     pass
