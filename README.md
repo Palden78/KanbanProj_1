@@ -351,3 +351,11 @@ Suggestions and improvements are welcome:
 2. Create a feature branch.
 3. Make and test your changes.
 4. Open a pull request explaining what changed.
+
+
+# FOR DEV PUSHING
+# Running from root
+./scripts/quickpush.sh "feat: add user PATCH endpoint fixes"
+
+# Running from inside backend/
+../scripts/quickpush.sh
