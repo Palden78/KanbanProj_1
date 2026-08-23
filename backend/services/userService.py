@@ -73,6 +73,7 @@ async def updateUserbyID(userID: str, updateDetails:UserUpdate ):
         # Uses setattr() to bypass 'does not support item assignment'
         setattr(user, k, v)
 
+    #update the in memory user array
     users[userID] = user 
 
     return {"message": "User updated successfully" ,"data":user}
