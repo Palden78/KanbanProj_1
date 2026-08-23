@@ -1,5 +1,5 @@
 from inMemoryUsers import users
-from models.userModels import UserCreate, UserUpdate, SavedUser
+from models.userModels import UserCreate, UserUpdate, SavedUser, UserResponse
 import uuid
 from datetime import datetime,timezone
 from pydantic import ValidationError, TypeAdapter, EmailStr
@@ -15,18 +15,25 @@ async def createNewUser(newUser:UserCreate):
     hashedPassword = hash_password(newUser.password.get_secret_value())
 
     try:
+        newUserResponse = UserResponse(
+            id = newId,
+            username = newUser.username,
+            email = newUser.email,
+            createdAt = TimecreatedAt
+        )
+
         newUserCreated = SavedUser(
-                            username= newUser.username,
-                            email = newUser.email,
-                            id= newId,
-                            password_hash = hashedPassword,
-                            createdAt = TimecreatedAt)
+                                    username= newUser.username,
+                                    email = newUser.email,
+                                    id= newId,
+                                    password_hash = hashedPassword,
+                                    createdAt = TimecreatedAt)
 
         #TO DO Remove when database is integrated
-        if any( user.email == newUserCreated.email for user in users.values()):
+        if any( user.email == newUserResponse.email for user in users.values()):
             return "Duplicate email"
-        users[newId] = newUserCreated
-        return newUserCreated
+        users[newId] = newUserResponse
+        return newUserResponse
     except ValidationError as e:
         errors = e.errors()
 

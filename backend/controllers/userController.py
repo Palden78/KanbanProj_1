@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Response
 from services.userService import getAllUsers, createNewUser, getUserBYID,updateUserbyID, deleteUserBYID
-from models.userModels import UserCreate, UserUpdate
+from models.userModels import UserCreate, UserUpdate,  UserResponse
 
 Userrouter = APIRouter(
     prefix = "/users",
