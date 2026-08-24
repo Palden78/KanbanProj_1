@@ -17,13 +17,16 @@ A responsive full-stack Kanban project for organizing tasks across **To Do**, **
 | Browser persistence | Functional with `localStorage` |
 | Drag and drop | Functional between columns |
 | FastAPI task API | In-memory CRUD implemented |
-| User API and task ownership | Planned next |
-| PostgreSQL persistence | Planned |
+| User CRUD API | In-memory CRUD implemented; hardening in progress |
+| Password hashing | Implemented with `pwdlib` |
+| Login | Credential verification implemented; token/session auth planned |
+| Task ownership | Planned |
+| PostgreSQL persistence | Planned with Alembic migrations |
 | Frontend/backend integration | Not started |
 | Automated testing | Not implemented |
 
 > [!IMPORTANT]
-> The frontend and backend currently run independently. The frontend still uses browser `localStorage`, while the backend stores tasks in process memory. Restarting the FastAPI server clears its task collection.
+> The frontend and backend currently run independently. The frontend still uses browser `localStorage`, while the backend stores tasks and users in process memory. Restarting the FastAPI server clears both collections. Login currently verifies credentials only; it does not issue a token or create a session for subsequent requests.
 
 ## Implemented Frontend Features
 
@@ -59,8 +62,13 @@ The board uses the browser's native HTML drag-and-drop API:
 - Create, list, retrieve, update, move, and delete operations
 - `404 Not Found` responses for unknown task IDs
 - Request validation through FastAPI and Pydantic
+- In-memory user creation, listing, retrieval, updating, and deletion
+- Separate public, stored, create, and update user models
+- Password hashing with `pwdlib`; plaintext passwords are not stored
+- Email-and-password login credential verification at `POST /auth/login`
+- Password-free responses for registration and successful login
 
-The backend is currently intended for independent API development and manual testing with Postman. It is not yet consumed by the React application.
+The backend is currently intended for independent API development and manual testing with Postman. It is not yet consumed by the React application. User response filtering, consistent email normalization, login failure semantics, and automated regression coverage are the current hardening priorities.
 
 ## Technology Stack
 
@@ -81,8 +89,10 @@ The backend is currently intended for independent API development and manual tes
 | [FastAPI](https://fastapi.tiangolo.com/) | HTTP API framework |
 | [Pydantic](https://docs.pydantic.dev/) | Request validation and data models |
 | [Uvicorn](https://www.uvicorn.org/) | ASGI development server |
+| [`pwdlib`](https://frankie567.github.io/pwdlib/) | Password hashing and verification |
 | Python | Backend runtime |
 | PostgreSQL | Planned durable database |
+| [Alembic](https://alembic.sqlalchemy.org/) | Planned database migrations |
 
 ## Project Structure
 
@@ -103,13 +113,21 @@ KanbanProj_1/
 │   └── vite.config.ts
 ├── backend/
 │   ├── controllers/
+│   │   ├── authController.py       # Login HTTP route
 │   │   ├── taskController.py       # Task HTTP routes
-│   │   └── userController.py       # User API scaffold
+│   │   └── userController.py       # User CRUD routes
+│   ├── core/
+│   │   └── security.py             # Password hashing and verification
 │   ├── models/
-│   │   └── models.py               # Pydantic task models
+│   │   ├── loginModels.py          # Login request model
+│   │   ├── models.py               # Pydantic task models
+│   │   └── userModels.py           # Public and internal user models
 │   ├── services/
-│   │   └── taskService.py          # In-memory task operations
+│   │   ├── authService.py          # Credential verification
+│   │   ├── taskService.py          # In-memory task operations
+│   │   └── userService.py          # In-memory user operations
 │   ├── inMemoryTasks.py            # Temporary task collection
+│   ├── inMemoryUsers.py            # Temporary user collection
 │   └── main.py                     # FastAPI application entry point
 ├── .gitignore
 └── README.md
@@ -163,7 +181,7 @@ From the repository root:
 cd backend
 python3 -m venv venv
 source venv/bin/activate
-python -m pip install "fastapi[standard]"
+python -m pip install "fastapi[standard]" "pwdlib[bcrypt]"
 fastapi dev main.py
 ```
 
@@ -200,6 +218,26 @@ FastAPI provides generated documentation at:
 | `DELETE` | `/tasks/{task_id}` | `204 No Content` | Delete a task |
 
 Unknown task IDs return `404 Not Found` for single-task operations.
+
+### Users
+
+| Method | Endpoint | Success | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/users/` | `200 OK` | Retrieve all users |
+| `POST` | `/users/` | `201 Created` | Create an account |
+| `GET` | `/users/{user_id}` | `200 OK` | Retrieve one user |
+| `PATCH` | `/users/{user_id}` | `200 OK` | Update a user's profile |
+| `DELETE` | `/users/{user_id}` | `204 No Content` | Delete a user |
+
+Account creation accepts a username, email address, and password. Passwords are hashed before storage and must never appear—either as plaintext or hashes—in public API responses.
+
+### Authentication
+
+| Method | Endpoint | Success | Purpose |
+| --- | --- | --- | --- |
+| `POST` | `/auth/login` | `200 OK` | Verify an email and password |
+
+Login currently performs credential verification and returns public user information. Access tokens, server-side sessions, authenticated-route dependencies, and authorization are not implemented yet.
 
 ### Task Data Shape
 
@@ -261,35 +299,33 @@ Frontend task data survives page reloads for the same browser profile and origin
 ```text
 Postman / HTTP client
     ↓
-FastAPI task controller
+FastAPI task, user, and authentication controllers
     ↓
-Task service
+Task, user, and authentication services
     ↓
-In-memory task dictionary
+In-memory task and user dictionaries
 ```
 
-Backend task data survives multiple requests while the server process remains active, but it is lost when the server restarts.
+Backend task and user data survive multiple requests while the server process remains active, but both collections are lost when the server restarts. Account creation hashes passwords before storage, and login verifies a supplied password against its stored hash.
 
 ## Planned User Ownership
 
-The next domain milestone is a one-to-many relationship:
+User records and in-memory CRUD now exist. The next domain milestone is connecting users and tasks through a one-to-many relationship:
 
 ```text
 One User ───── owns ───── Many Tasks
 Each Task ─── belongs to ─── One User
 ```
 
-Planned work includes:
+Planned ownership work includes:
 
-- Pydantic user create, update, and response models
-- In-memory user CRUD endpoints
 - A required `userId` on each task
 - Validation that a task owner exists before task creation
-- Retrieval of all tasks owned by a specific user
-- Duplicate-email protection
+- Retrieval of all tasks owned by the authenticated user
+- Authorization that prevents users from reading or changing another user's tasks
 - A defined policy for deleting users who still own tasks
 
-User routes and task ownership are not implemented yet.
+Task ownership and authorization are not implemented yet.
 
 ## PostgreSQL Goal
 
@@ -322,9 +358,15 @@ Database selection details, schema migrations, connection pooling, and environme
 - [x] Implement task update, movement, and deletion endpoints
 - [ ] Complete full Postman regression testing for task CRUD
 - [ ] Add a reproducible backend dependency manifest
-- [ ] Define user schemas and implement in-memory user CRUD
-- [ ] Add required one-to-many task ownership
-- [ ] Add backend persistence with PostgreSQL
+- [x] Define user schemas and implement in-memory user CRUD
+- [x] Hash passwords before storing user accounts
+- [x] Add email-and-password login credential verification
+- [ ] Ensure every public user response excludes password hashes
+- [ ] Normalize email consistently and standardize authentication failures
+- [ ] Issue an access token or establish a server-side session
+- [ ] Protect API routes with an authenticated-user dependency
+- [ ] Add required one-to-many task ownership and authorization
+- [ ] Add backend persistence with PostgreSQL and Alembic
 - [ ] Add automated frontend and backend tests
 - [ ] Configure CORS and an API base URL
 - [ ] Connect the React frontend to FastAPI
@@ -335,9 +377,11 @@ Database selection details, schema migrations, connection pooling, and environme
 - The frontend is not connected to the backend.
 - Frontend and backend currently maintain separate task collections.
 - Backend data is lost whenever the server restarts.
-- User records and task ownership are not implemented yet.
-- PostgreSQL persistence has not been added.
-- No authentication, authorization, or collaborative boards are available.
+- Login verifies credentials but does not maintain authenticated state.
+- User-response filtering and authentication error handling are still being hardened.
+- Task ownership and cross-user authorization are not implemented yet.
+- PostgreSQL persistence and Alembic migrations have not been added.
+- No token/session authentication or collaborative boards are available.
 - Drag and drop does not reliably support touch or reorder tasks within a column.
 - Search, filters, priorities, labels, and due dates are not implemented.
 - Frontend deletion has no confirmation or undo action.
