@@ -15,7 +15,7 @@ async def loginUser(loginDetails:LoginRequest):
     match res:
         case "Stored user not found":
             raise HTTPException(status_code = 401, detail="Invalid email or password")
-        case "Incorrect password":
+        case "Invalid email or password":
             raise HTTPException(status_code = 401, detail="Incorrect password")
 
     return res 
