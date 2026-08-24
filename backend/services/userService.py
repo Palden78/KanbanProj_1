@@ -13,24 +13,25 @@ async def createNewUser(newUser:UserCreate):
     newId = str(uuid.uuid4())
     TimecreatedAt = (datetime.now(timezone.utc)).isoformat()
     hashedPassword = hash_password(newUser.password.get_secret_value())
+    normalised_email = newUser.email.lower().strip()
 
     try:
         newUserResponse = UserResponse(
             id = newId,
             username = newUser.username,
-            email = newUser.email,
+            email = normalised_email,
             createdAt = TimecreatedAt
         )
 
         newUserCreated = SavedUser(
                                     username= newUser.username,
-                                    email = newUser.email,
+                                    email = normalised_email,
                                     id= newId,
                                     password_hash = hashedPassword,
                                     createdAt = TimecreatedAt)
 
         #TO DO Remove when database is integrated
-        if any( user.email == newUserResponse.email for user in users.values()):
+        if any( normalised_email == newUserResponse.email for user in users.values()):
             return "Duplicate email"
         users[newId] = newUserCreated
         return newUserResponse
@@ -61,11 +62,13 @@ async def updateUserbyID(userID: str, updateDetails:UserUpdate ):
 
     if "email" in update_user_data:
         new_email = update_user_data.get("email")
+        normalised_email = new_email.lower().strip()
 
-        if new_email is None or not str(new_email).strip():
+
+        if normalised_email is None or not str(normalised_email).strip():
             return "Null email"
 
-        new_email_str = str(new_email).lower()
+        new_email_str = str(normalised_email).lower()
 
         for uid, existing_user in users.items():
             existing_email = (

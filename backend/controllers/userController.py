@@ -17,7 +17,7 @@ async def createNewUserRoute(newUser:UserCreate):
     res = await createNewUser(newUser)
 
     if res == "Duplicate email":
-        raise HTTPException(status_code = 422, detail="Duplicate email")
+        raise HTTPException(status_code = 409, detail="Duplicate email")
     if res == "Username cannot be blank":
         raise HTTPException(status_code=422, detail= "Username cannot be blank")
     if res == "Invalid email format":
