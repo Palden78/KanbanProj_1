@@ -1,5 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Response
 from services.authService import loginService
+from models.loginModels import LoginRequest
 
 
 LoginRouter = APIRouter(
@@ -7,7 +8,14 @@ LoginRouter = APIRouter(
     tags = ["auth"]
 )
 
-@LoginRouter.post("/login",status_code=201)
-async def loginUser():
-    res = await loginService()
-    pass
+@LoginRouter.post("/login",status_code=200)
+async def loginUser(loginDetails:LoginRequest):
+    res = await loginService(loginDetails)
+
+    match res:
+        case "Stored user not found":
+            raise HTTPException(status_code = 401, detail="Invalid email or password")
+        case "Incorrect password":
+            raise HTTPException(status_code = 401, detail="Incorrect password")
+
+    return res 

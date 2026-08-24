@@ -32,7 +32,7 @@ async def createNewUser(newUser:UserCreate):
         #TO DO Remove when database is integrated
         if any( user.email == newUserResponse.email for user in users.values()):
             return "Duplicate email"
-        users[newId] = newUserResponse
+        users[newId] = newUserCreated
         return newUserResponse
     except ValidationError as e:
         errors = e.errors()
