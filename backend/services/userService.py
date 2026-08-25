@@ -4,10 +4,11 @@ import uuid
 from datetime import datetime,timezone
 from pydantic import ValidationError, TypeAdapter, EmailStr
 from core.security import hash_password
+from kanban_proj_1.backend.inMemoryUsersWithoutPasswords import UsersWithoutHashPasswords
 
 EMAIL_ADAPTER = TypeAdapter(EmailStr)
 async def getAllUsers():
-    return list(users.values())
+    return list(UsersWithoutHashPasswords.values())
 
 async def createNewUser(newUser:UserCreate):
     newId = str(uuid.uuid4())
@@ -34,6 +35,7 @@ async def createNewUser(newUser:UserCreate):
         if any( normalised_email == newUserResponse.email for user in users.values()):
             return "Duplicate email"
         users[newId] = newUserCreated
+        UsersWithoutHashPasswords[newId] = newUserResponse
         return newUserResponse
     except ValidationError as e:
         errors = e.errors()
@@ -44,7 +46,7 @@ async def createNewUser(newUser:UserCreate):
         return "Invalid email format"
 
 async def getUserBYID(userID:str):
-    return users.get(userID)
+    return UsersWithoutHashPasswords.get(userID)
 
 async def updateUserbyID(userID: str, updateDetails:UserUpdate ):
 
@@ -86,11 +88,14 @@ async def updateUserbyID(userID: str, updateDetails:UserUpdate ):
     #update the in memory user array
     users[userID] = user 
 
-    return {"message": "User updated successfully" ,"data":user}
+    userToRet = UsersWithoutHashPasswords.get(userID)
+
+    return {"message": "User updated successfully" ,"data":userToRet}
 
 
 async def deleteUserBYID(user_id:str):
     output = users.pop(user_id, "User not found")
-    return output
+    output2 = UsersWithoutHashPasswords.pop(user_id, "User not found")
+    return output2
  
 
