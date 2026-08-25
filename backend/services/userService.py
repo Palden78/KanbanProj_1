@@ -32,7 +32,7 @@ async def createNewUser(newUser:UserCreate):
                                     createdAt = TimecreatedAt)
 
         #TO DO Remove when database is integrated
-        if any( normalised_email == newUserResponse.email for user in users.values()):
+        if any( normalised_email == user.email for user in users.values()):
             return "Duplicate email"
         users[newId] = newUserCreated
         UsersWithoutHashPasswords[newId] = newUserResponse
