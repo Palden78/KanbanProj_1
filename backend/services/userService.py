@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime,timezone
 from pydantic import ValidationError, TypeAdapter, EmailStr
 from core.security import hash_password
-from kanban_proj_1.backend.inMemoryUsersWithoutPasswords import UsersWithoutHashPasswords
+from inMemoryUsersWithoutPasswords import UsersWithoutHashPasswords
 
 EMAIL_ADAPTER = TypeAdapter(EmailStr)
 async def getAllUsers():
