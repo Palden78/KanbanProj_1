@@ -403,3 +403,9 @@ Suggestions and improvements are welcome:
 
 # Running from inside backend/
 ../scripts/quickpush.sh
+
+
+
+
+
+CONSISTENCY IS KEY
