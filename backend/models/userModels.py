@@ -23,7 +23,7 @@ For profile update (User -> Backend)
 """
 class UserUpdate(BaseModel):
     username: Optional[str] = None
-    email: Optional[str] = None
+    email: Optional[EmailStr] = None
 
 
 """

@@ -84,11 +84,11 @@ async def updateUserbyID(userID: str, updateDetails:UserUpdate ):
 
     if "email" in update_user_data:
         new_email = update_user_data.get("email")
-        normalised_email = new_email.lower().strip()
 
-
-        if normalised_email is None or not str(normalised_email).strip():
+        if new_email is None or not str(new_email).strip():
             return "Null email"
+
+        normalised_email = str(new_email).lower().strip()
 
         new_email_str = str(normalised_email).lower()
 
