@@ -16,7 +16,7 @@ async def loginService(loginReq: LoginRequest):
     stored_user = get_user_by_email(Submitted_Email)
 
     if stored_user is None:
-         return "Stored user not found"
+         return None
 
     """
     Retrieve the stored user's password hash
@@ -29,7 +29,7 @@ async def loginService(loginReq: LoginRequest):
     stored password hash
     """
     if not pwdHash or not verify_password(Submitted_Password,pwdHash):
-         return "Invalid email or password"
+         return None
     else:
          retUser = UserResponse(
               id = stored_user.id ,

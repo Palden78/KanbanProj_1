@@ -12,10 +12,7 @@ LoginRouter = APIRouter(
 async def loginUser(loginDetails:LoginRequest):
     res = await loginService(loginDetails)
 
-    match res:
-        case "Stored user not found":
-            raise HTTPException(status_code = 401, detail="Invalid email or password")
-        case "Invalid email or password":
-            raise HTTPException(status_code = 401, detail="Incorrect password")
+    if res == None:
+        raise HTTPException(status_code = 401, detail="Invalid email or password")
 
     return res 
