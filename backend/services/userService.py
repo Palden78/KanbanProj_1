@@ -8,7 +8,17 @@ from inMemoryUsersWithoutPasswords import UsersWithoutHashPasswords
 
 EMAIL_ADAPTER = TypeAdapter(EmailStr)
 async def getAllUsers():
-    return list(UsersWithoutHashPasswords.values())
+    retUsers = []
+    for user in users:
+        Retuser = UserResponse(
+            id = users[user].id ,
+            username= users[user].username,
+            email = users[user].email ,
+            createdAt = users[user].createdAt ,
+        ) 
+        retUsers.append(Retuser)
+        
+    return retUsers
 
 async def createNewUser(newUser:UserCreate):
     newId = str(uuid.uuid4())
@@ -35,7 +45,7 @@ async def createNewUser(newUser:UserCreate):
         if any( normalised_email == user.email for user in users.values()):
             return "Duplicate email"
         users[newId] = newUserCreated
-        UsersWithoutHashPasswords[newId] = newUserResponse
+
         return newUserResponse
     except ValidationError as e:
         errors = e.errors()
@@ -46,7 +56,17 @@ async def createNewUser(newUser:UserCreate):
         return "Invalid email format"
 
 async def getUserBYID(userID:str):
-    return UsersWithoutHashPasswords.get(userID)
+    for user in users:
+        if user == userID:
+            retUser = UserResponse(
+                id = users[user].id ,
+                username= users[user].username,
+                email = users[user].email ,
+                createdAt = users[user].createdAt
+            )
+            return retUser
+    return None 
+
 
 async def updateUserbyID(userID: str, updateDetails:UserUpdate ):
 
@@ -88,14 +108,30 @@ async def updateUserbyID(userID: str, updateDetails:UserUpdate ):
     #update the in memory user array
     users[userID] = user 
 
-    userToRet = UsersWithoutHashPasswords.get(userID)
+    userToRet = UserResponse(
+        id = user.id,
+        username= user.username,
+        email = user.email ,
+        createdAt = user.createdAt
+    )
 
     return {"message": "User updated successfully" ,"data":userToRet}
 
 
 async def deleteUserBYID(user_id:str):
-    output = users.pop(user_id, "User not found")
-    output2 = UsersWithoutHashPasswords.pop(user_id, "User not found")
-    return output2
+    user = users.get(user_id)
+    if user is None :
+        return "User not found"
+    else:
+        users.pop(user_id)
+
+    return UserResponse(
+        id = user.id ,
+        username= user.username,
+        email = user.email ,
+        createdAt = user.createdAt
+    )
+
+
  
 
