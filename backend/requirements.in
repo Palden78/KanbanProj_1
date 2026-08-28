@@ -1,0 +1,5 @@
+fastapi
+fastapi[standard]
+pydantic-settings
+pwdlib[bcrypt]
+pyjwt
