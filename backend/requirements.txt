@@ -93,6 +93,7 @@ pyjwt==2.13.0
     # via -r requirements.in
 python-dotenv==1.2.3
     # via
+    #   -r requirements.in
     #   pydantic-settings
     #   uvicorn
 python-multipart==0.0.32
