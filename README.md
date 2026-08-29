@@ -1,6 +1,6 @@
 # Kanban Task Board
 
-A responsive full-stack Kanban project for organizing tasks across **To Do**, **In Progress**, and **Done**. The React frontend is functional and persists tasks in the browser. A separate FastAPI backend now provides in-memory task CRUD endpoints and is being tested independently before frontend integration and PostgreSQL persistence.
+A responsive full-stack Kanban project for organizing tasks across **To Do**, **In Progress**, and **Done**. The React frontend is functional and persists tasks in the browser. A separate FastAPI backend now provides in-memory task and user CRUD, password-based login, and signed JWT access-token issuance while authentication and PostgreSQL persistence are developed independently.
 
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
@@ -19,14 +19,15 @@ A responsive full-stack Kanban project for organizing tasks across **To Do**, **
 | FastAPI task API | In-memory CRUD implemented |
 | User CRUD API | In-memory CRUD implemented; hardening in progress |
 | Password hashing | Implemented with `pwdlib` |
-| Login | Credential verification implemented; token/session auth planned |
+| Login | Credential verification and JWT access-token issuance implemented |
+| Current-user dependency and route protection | Planned next |
 | Task ownership | Planned |
 | PostgreSQL persistence | Planned with Alembic migrations |
 | Frontend/backend integration | Not started |
 | Automated testing | Not implemented |
 
 > [!IMPORTANT]
-> The frontend and backend currently run independently. The frontend still uses browser `localStorage`, while the backend stores tasks and users in process memory. Restarting the FastAPI server clears both collections. Login currently verifies credentials only; it does not issue a token or create a session for subsequent requests.
+> The frontend and backend currently run independently. The frontend still uses browser `localStorage`, while the backend stores tasks and users in process memory. Restarting the FastAPI server clears both collections. Login now issues a short-lived JWT access token, but incoming tokens are not yet verified and API routes are not protected.
 
 ## Implemented Frontend Features
 
@@ -66,9 +67,14 @@ The board uses the browser's native HTML drag-and-drop API:
 - Separate public, stored, create, and update user models
 - Password hashing with `pwdlib`; plaintext passwords are not stored
 - Email-and-password login credential verification at `POST /auth/login`
+- Generic `401 Unauthorized` responses for invalid login credentials
+- Signed JWT access tokens using PyJWT and HS256
+- Access-token claims for subject, issued time, expiration, and token type
+- Configurable JWT secret, algorithm, and expiration through environment variables
 - Password-free responses for registration and successful login
+- Reproducible direct and pinned backend dependency manifests
 
-The backend is currently intended for independent API development and manual testing with Postman. It is not yet consumed by the React application. User response filtering, consistent email normalization, login failure semantics, and automated regression coverage are the current hardening priorities.
+The backend is currently intended for independent API development and manual testing with Postman. It is not yet consumed by the React application. JWT decoding, a current-user dependency, protected routes, task ownership, and automated regression coverage are the next priorities.
 
 ## Technology Stack
 
@@ -90,6 +96,8 @@ The backend is currently intended for independent API development and manual tes
 | [Pydantic](https://docs.pydantic.dev/) | Request validation and data models |
 | [Uvicorn](https://www.uvicorn.org/) | ASGI development server |
 | [`pwdlib`](https://frankie567.github.io/pwdlib/) | Password hashing and verification |
+| [PyJWT](https://pyjwt.readthedocs.io/) | Signed JWT access-token creation |
+| [`python-dotenv`](https://pypi.org/project/python-dotenv/) | Local environment configuration |
 | Python | Backend runtime |
 | PostgreSQL | Planned durable database |
 | [Alembic](https://alembic.sqlalchemy.org/) | Planned database migrations |
@@ -117,17 +125,20 @@ KanbanProj_1/
 │   │   ├── taskController.py       # Task HTTP routes
 │   │   └── userController.py       # User CRUD routes
 │   ├── core/
+│   │   ├── config.py               # JWT environment configuration
 │   │   └── security.py             # Password hashing and verification
 │   ├── models/
-│   │   ├── loginModels.py          # Login request model
+│   │   ├── loginModels.py          # Login and token response models
 │   │   ├── models.py               # Pydantic task models
 │   │   └── userModels.py           # Public and internal user models
 │   ├── services/
-│   │   ├── authService.py          # Credential verification
+│   │   ├── authService.py          # Credential verification and JWT issuance
 │   │   ├── taskService.py          # In-memory task operations
 │   │   └── userService.py          # In-memory user operations
 │   ├── inMemoryTasks.py            # Temporary task collection
 │   ├── inMemoryUsers.py            # Temporary user collection
+│   ├── requirements.in             # Direct backend dependencies
+│   ├── requirements.txt            # Pinned backend dependencies
 │   └── main.py                     # FastAPI application entry point
 ├── .gitignore
 └── README.md
@@ -173,15 +184,28 @@ Open the URL printed by Vite, usually [http://localhost:5173](http://localhost:5
 
 ## Running the Backend
 
-The backend dependency manifest has not been added yet, so the following remains a provisional development setup.
-
-From the repository root:
+From the repository root, create a virtual environment and install the pinned backend dependencies:
 
 ```bash
 cd backend
 python3 -m venv venv
 source venv/bin/activate
-python -m pip install "fastapi[standard]" "pwdlib[bcrypt]"
+python -m pip install -r requirements.txt
+```
+
+Create a root-level `.env` file with the required JWT settings before starting the API:
+
+```dotenv
+JWT_SECRET=<strong-random-development-secret>
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+```
+
+The real `.env` file is ignored by Git. Never commit the JWT secret.
+
+Start the development server:
+
+```bash
 fastapi dev main.py
 ```
 
@@ -235,9 +259,27 @@ Account creation accepts a username, email address, and password. Passwords are 
 
 | Method | Endpoint | Success | Purpose |
 | --- | --- | --- | --- |
-| `POST` | `/auth/login` | `200 OK` | Verify an email and password |
+| `POST` | `/auth/login` | `200 OK` | Verify credentials and issue a JWT access token |
 
-Login currently performs credential verification and returns public user information. Access tokens, server-side sessions, authenticated-route dependencies, and authorization are not implemented yet.
+Successful login returns a signed bearer token and public user information:
+
+```json
+{
+  "message": "login successful",
+  "token": {
+    "access_token": "<signed-jwt>",
+    "token_type": "bearer"
+  },
+  "data": {
+    "id": "<user-id>",
+    "username": "<username>",
+    "email": "<normalized-email>",
+    "createdAt": "<timestamp>"
+  }
+}
+```
+
+The access token contains `sub`, `iat`, `exp`, and `type: "access"` claims and currently expires after 30 minutes. Access-token verification, server-side sessions, refresh tokens, logout/revocation, authenticated-route dependencies, and authorization are not implemented yet.
 
 ### Task Data Shape
 
@@ -306,7 +348,7 @@ Task, user, and authentication services
 In-memory task and user dictionaries
 ```
 
-Backend task and user data survive multiple requests while the server process remains active, but both collections are lost when the server restarts. Account creation hashes passwords before storage, and login verifies a supplied password against its stored hash.
+Backend task and user data survive multiple requests while the server process remains active, but both collections are lost when the server restarts. Account creation hashes passwords before storage; login verifies a supplied password against its stored hash and issues a signed, expiring JWT access token.
 
 ## Planned User Ownership
 
@@ -357,14 +399,16 @@ Database selection details, schema migrations, connection pooling, and environme
 - [x] Implement task create and retrieval endpoints
 - [x] Implement task update, movement, and deletion endpoints
 - [ ] Complete full Postman regression testing for task CRUD
-- [ ] Add a reproducible backend dependency manifest
+- [x] Add direct and pinned backend dependency manifests
 - [x] Define user schemas and implement in-memory user CRUD
 - [x] Hash passwords before storing user accounts
 - [x] Add email-and-password login credential verification
-- [ ] Ensure every public user response excludes password hashes
-- [ ] Normalize email consistently and standardize authentication failures
-- [ ] Issue an access token or establish a server-side session
-- [ ] Protect API routes with an authenticated-user dependency
+- [x] Normalize login email and standardize authentication failures
+- [x] Issue signed, expiring JWT access tokens
+- [x] Load JWT configuration from environment variables
+- [ ] Decode and validate access tokens from bearer headers
+- [ ] Add a current-user authentication dependency
+- [ ] Protect API routes with the authenticated-user dependency
 - [ ] Add required one-to-many task ownership and authorization
 - [ ] Add backend persistence with PostgreSQL and Alembic
 - [ ] Add automated frontend and backend tests
@@ -377,8 +421,8 @@ Database selection details, schema migrations, connection pooling, and environme
 - The frontend is not connected to the backend.
 - Frontend and backend currently maintain separate task collections.
 - Backend data is lost whenever the server restarts.
-- Login verifies credentials but does not maintain authenticated state.
-- User-response filtering and authentication error handling are still being hardened.
+- Login issues an access token, but API routes do not yet validate or require it.
+- No current-user dependency, refresh-token flow, logout, or token revocation is implemented.
 - Task ownership and cross-user authorization are not implemented yet.
 - PostgreSQL persistence and Alembic migrations have not been added.
 - No token/session authentication or collaborative boards are available.
