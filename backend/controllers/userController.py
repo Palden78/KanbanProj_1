@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Response, Depends
 from services.userService import getAllUsers, createNewUser, getUserBYID,updateUserbyID, deleteUserBYID
 from models.userModels import UserCreate, UserUpdate,  UserResponse
+from core.security import get_current_user
 
 Userrouter = APIRouter(
     prefix = "/users",
@@ -11,6 +12,11 @@ Userrouter = APIRouter(
 async def getUsers():
     res = await getAllUsers()
     return res
+
+@Userrouter.get("/me", response_model=UserResponse)
+async def get_me(current_user: UserResponse = Depends(get_current_user)):
+    return current_user
+
 
 @Userrouter.post("/", status_code=201)
 async def createNewUserRoute(newUser:UserCreate):
