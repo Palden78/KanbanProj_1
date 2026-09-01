@@ -67,13 +67,7 @@ async def getUserBYID(userID:str):
             return retUser
     return None 
 
-
-async def updateUserbyID(userID: str, updateDetails:UserUpdate ):
-
-    user = users.get(userID)
-
-    if user is None:
-        return None 
+async def UpdateLogic(userID: str, user: UserResponse, updateDetails: UserUpdate):
 
     update_user_data:UserUpdate = updateDetails.model_dump(exclude_unset=True)
 
@@ -102,8 +96,8 @@ async def updateUserbyID(userID: str, updateDetails:UserUpdate ):
         update_user_data["email"] = new_email_str
 
     for k,v in update_user_data.items():
-        # Uses setattr() to bypass 'does not support item assignment'
-        setattr(user, k, v)
+            # Uses setattr() to bypass 'does not support item assignment'
+            setattr(user, k, v)
 
     #update the in memory user array
     users[userID] = user 
@@ -115,8 +109,41 @@ async def updateUserbyID(userID: str, updateDetails:UserUpdate ):
         createdAt = user.createdAt
     )
 
-    return {"message": "User updated successfully" ,"data":userToRet}
+    return userToRet
 
+async def patchMe(user: UserResponse, updateDetails : UserUpdate):
+
+    if user is None:
+        return None 
+
+    userId = user.id
+
+    return await UpdateLogic(userId, user, updateDetails)
+    
+async def updateUserbyID(userID: str, updateDetails:UserUpdate ):
+
+    user = users.get(userID)
+
+    if user is None:
+        return None 
+
+    return await UpdateLogic(userID, user, updateDetails)
+
+async def deleteSelf(user: UserResponse):
+    curr_user = user 
+    if user is None:
+        return "Invalid user"
+
+    curr_user_id = curr_user.id
+
+    users.pop(curr_user_id)
+
+    return UserResponse(
+        id = curr_user_id,
+        username = curr_user.username,
+        email = curr_user.email,
+        createdAt = curr_user.createdAt
+    )
 
 async def deleteUserBYID(user_id:str):
     user = users.get(user_id)

@@ -11,6 +11,8 @@ app.include_router(task_router)
 app.include_router(user_router)
 app.include_router(login_router)
 
+#public route
 @app.get("/")
 def read_root():
-    return {"Hello":"World"}
+    return {"Hello":"World",
+            "Description":"Backend API of the project"}

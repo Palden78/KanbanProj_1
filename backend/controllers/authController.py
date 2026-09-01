@@ -8,6 +8,7 @@ LoginRouter = APIRouter(
     tags = ["auth"]
 )
 
+#PUBLIC ROUTE
 @LoginRouter.post("/login",status_code=200)
 async def loginUser(loginDetails:LoginRequest):
     res = await loginService(loginDetails)
