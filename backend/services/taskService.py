@@ -1,10 +1,23 @@
-from models.models import TaskDraft as td
 import uuid 
 from datetime import datetime, timezone 
 from inMemoryTasks import tasks
-from models.models import TaskUpdate as T_update
+from models.models import TaskDraft as td, TaskUpdate as T_update
+from models.userModels import UserResponse
 
-async def createTask(task:td):
+
+def checkAuthorisedUse(task_id: str, curr_user_id: str) -> str:
+    """Checks if a task exists and whether the current user owns it."""
+    task = tasks.get(task_id)
+    if task is None:
+        return "not found"
+
+    if task.get("userId") != curr_user_id:
+        return "unauthorized access"
+
+    return "authorised access"
+
+
+async def createTask(task: td, current_user: UserResponse):
     taskID = str(uuid.uuid4())
     status = "To Do"
     timestamp = (datetime.now(timezone.utc)).isoformat()
@@ -12,37 +25,46 @@ async def createTask(task:td):
     newTask = {
         "taskName": task.taskName,
         "description": task.description,
-        "id":taskID,
+        "id": taskID,
         "status": status,
-        "createdAt": timestamp
+        "createdAt": timestamp,
+        "userId": current_user.id
     }
     tasks[taskID] = newTask
     return newTask 
 
-async def getAllTasks():
-    return list(tasks.values())
 
-async def getTaskById(id):
+async def getAllTasks(current_user: UserResponse):
+    currId = current_user.id
+    return [t for t in tasks.values() if t.get('userId') == currId]
+
+
+async def getTaskById(id: str, current_user: UserResponse):
+    verdict = checkAuthorisedUse(id, current_user.id)
+    if verdict in ("unauthorized access", "not found"):
+        return verdict
+
     return tasks.get(id)
 
-async def updateTask(id, task_update:T_update):
-    #Get task from db
+
+async def updateTask(id: str, task_update: T_update, current_user: UserResponse):
+    verdict = checkAuthorisedUse(id, current_user.id)
+    if verdict in ("unauthorized access", "not found"):
+        return verdict
+
     taskToUpdate = tasks.get(id)
-
-    if taskToUpdate is None:
-        return taskToUpdate
-
-    # Extract fields sent by the client only
     update_data = task_update.model_dump(exclude_unset=True)
 
-    for k,v in update_data.items():
+    for k, v in update_data.items():
         taskToUpdate[k] = v 
 
     tasks[id] = taskToUpdate
+    return {"message": "Item updated successfully", "data": taskToUpdate}
 
-    return {"message": "Item updated successfully", "data":taskToUpdate}
 
-async def deleteTaskByID(id):
-    output = tasks.pop(id, "Not found")
-    return output
-    
+async def deleteTaskByID(id: str, current_user: UserResponse):
+    verdict = checkAuthorisedUse(id, current_user.id)
+    if verdict in ("unauthorized access", "not found"):
+        return verdict
+
+    return tasks.pop(id, None)

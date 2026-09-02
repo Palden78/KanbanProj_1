@@ -12,6 +12,7 @@ class SavedTask(TaskDraft):
     id: str 
     status : TaskStatus
     createdAt: str 
+    userId: str = Field(frozen=True)
 
 class TaskUpdate(BaseModel):
     taskName: Optional[str] = None 
