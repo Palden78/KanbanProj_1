@@ -1,6 +1,6 @@
 # Kanban Task Board
 
-A responsive full-stack Kanban project for organizing tasks across **To Do**, **In Progress**, and **Done**. The React frontend is functional and persists tasks in the browser. A separate FastAPI backend now provides in-memory task and user CRUD, password-based login, and signed JWT access-token issuance while authentication and PostgreSQL persistence are developed independently.
+A responsive full-stack Kanban project for organizing tasks across **To Do**, **In Progress**, and **Done**. The React frontend is functional and persists tasks in the browser. A separate FastAPI backend now provides in-memory task and user CRUD, JWT bearer authentication, protected self-service routes, and user-owned tasks while PostgreSQL persistence and frontend integration are developed independently.
 
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
@@ -20,14 +20,16 @@ A responsive full-stack Kanban project for organizing tasks across **To Do**, **
 | User CRUD API | In-memory CRUD implemented; hardening in progress |
 | Password hashing | Implemented with `pwdlib` |
 | Login | Credential verification and JWT access-token issuance implemented |
-| Current-user dependency and route protection | Planned next |
-| Task ownership | Planned |
+| Bearer-token verification | Implemented |
+| Current-user dependency | Implemented with `/users/me` |
+| Route protection | Task and self-service user routes protected; legacy user routes pending |
+| Task ownership | Required and owner-scoped in memory |
 | PostgreSQL persistence | Planned with Alembic migrations |
 | Frontend/backend integration | Not started |
 | Automated testing | Not implemented |
 
 > [!IMPORTANT]
-> The frontend and backend currently run independently. The frontend still uses browser `localStorage`, while the backend stores tasks and users in process memory. Restarting the FastAPI server clears both collections. Login now issues a short-lived JWT access token, but incoming tokens are not yet verified and API routes are not protected.
+> The frontend and backend currently run independently. The frontend still uses browser `localStorage`, while the backend stores tasks and users in process memory. Restarting the FastAPI server clears both collections. The backend now verifies bearer tokens and protects all task routes plus `/users/me`; legacy ID-based user routes still require authorization hardening.
 
 ## Implemented Frontend Features
 
@@ -73,8 +75,15 @@ The board uses the browser's native HTML drag-and-drop API:
 - Configurable JWT secret, algorithm, and expiration through environment variables
 - Password-free responses for registration and successful login
 - Reproducible direct and pinned backend dependency manifests
+- Incoming JWT signature, expiry, subject, and access-token type validation
+- Bearer-token extraction with FastAPI's `HTTPBearer`
+- A current-user dependency that resolves token subjects against stored users
+- Protected `GET`, `PATCH`, and `DELETE` operations at `/users/me`
+- Authentication on every task route
+- Server-assigned `userId` ownership on task creation
+- Owner-filtered task listing and ownership checks for single-task operations
 
-The backend is currently intended for independent API development and manual testing with Postman. It is not yet consumed by the React application. JWT decoding, a current-user dependency, protected routes, task ownership, and automated regression coverage are the next priorities.
+The backend is currently intended for independent API development and manual testing with Postman. It is not yet consumed by the React application. Remaining priorities include hardening legacy user routes, completing deletion/ownership policies, automated regression coverage, and database persistence.
 
 ## Technology Stack
 
@@ -96,7 +105,7 @@ The backend is currently intended for independent API development and manual tes
 | [Pydantic](https://docs.pydantic.dev/) | Request validation and data models |
 | [Uvicorn](https://www.uvicorn.org/) | ASGI development server |
 | [`pwdlib`](https://frankie567.github.io/pwdlib/) | Password hashing and verification |
-| [PyJWT](https://pyjwt.readthedocs.io/) | Signed JWT access-token creation |
+| [PyJWT](https://pyjwt.readthedocs.io/) | Signed JWT access-token creation and validation |
 | [`python-dotenv`](https://pypi.org/project/python-dotenv/) | Local environment configuration |
 | Python | Backend runtime |
 | PostgreSQL | Planned durable database |
@@ -126,7 +135,7 @@ KanbanProj_1/
 │   │   └── userController.py       # User CRUD routes
 │   ├── core/
 │   │   ├── config.py               # JWT environment configuration
-│   │   └── security.py             # Password hashing and verification
+│   │   └── security.py             # Password hashing, token handling, and current user
 │   ├── models/
 │   │   ├── loginModels.py          # Login and token response models
 │   │   ├── models.py               # Pydantic task models
@@ -233,27 +242,30 @@ FastAPI provides generated documentation at:
 
 ### Tasks
 
-| Method | Endpoint | Success | Purpose |
-| --- | --- | --- | --- |
-| `GET` | `/tasks/` | `200 OK` | Retrieve all tasks |
-| `POST` | `/tasks/` | `201 Created` | Create a task |
-| `GET` | `/tasks/{task_id}` | `200 OK` | Retrieve one task |
-| `PATCH` | `/tasks/{task_id}` | `200 OK` | Edit a task or move it to another column |
-| `DELETE` | `/tasks/{task_id}` | `204 No Content` | Delete a task |
+| Method | Endpoint | Auth | Success | Purpose |
+| --- | --- | --- | --- | --- |
+| `GET` | `/tasks/` | Bearer | `200 OK` | Retrieve the current user's tasks |
+| `POST` | `/tasks/` | Bearer | `201 Created` | Create a task owned by the current user |
+| `GET` | `/tasks/{task_id}` | Bearer | `200 OK` | Retrieve an owned task |
+| `PATCH` | `/tasks/{task_id}` | Bearer | `200 OK` | Edit or move an owned task |
+| `DELETE` | `/tasks/{task_id}` | Bearer | `204 No Content` | Delete an owned task |
 
-Unknown task IDs return `404 Not Found` for single-task operations.
+Missing or invalid authentication returns `401 Unauthorized`. Unknown task IDs return `404 Not Found`, while attempts to access a task owned by another user currently return `403 Forbidden`.
 
 ### Users
 
-| Method | Endpoint | Success | Purpose |
-| --- | --- | --- | --- |
-| `GET` | `/users/` | `200 OK` | Retrieve all users |
-| `POST` | `/users/` | `201 Created` | Create an account |
-| `GET` | `/users/{user_id}` | `200 OK` | Retrieve one user |
-| `PATCH` | `/users/{user_id}` | `200 OK` | Update a user's profile |
-| `DELETE` | `/users/{user_id}` | `204 No Content` | Delete a user |
+| Method | Endpoint | Auth | Success | Purpose |
+| --- | --- | --- | --- | --- |
+| `GET` | `/users/` | Public legacy route | `200 OK` | Retrieve public user records |
+| `POST` | `/users/` | Public | `201 Created` | Create an account |
+| `GET` | `/users/me` | Bearer | `200 OK` | Retrieve the current user |
+| `PATCH` | `/users/me` | Bearer | `200 OK` | Update the current user's profile |
+| `DELETE` | `/users/me` | Bearer | `204 No Content` | Delete the current user |
+| `GET` | `/users/{user_id}` | Public legacy route | `200 OK` | Retrieve one user |
+| `PATCH` | `/users/{user_id}` | Public legacy route | `200 OK` | Update a user's profile |
+| `DELETE` | `/users/{user_id}` | Public legacy route | `204 No Content` | Delete a user |
 
-Account creation accepts a username, email address, and password. Passwords are hashed before storage and must never appear—either as plaintext or hashes—in public API responses.
+Registration accepts a username, email address, and password. Passwords are hashed before storage and must never appear—either as plaintext or hashes—in public API responses. The ID-based user routes remain legacy public routes and are scheduled for authorization hardening; prefer the bearer-protected `/users/me` routes.
 
 ### Authentication
 
@@ -279,7 +291,13 @@ Successful login returns a signed bearer token and public user information:
 }
 ```
 
-The access token contains `sub`, `iat`, `exp`, and `type: "access"` claims and currently expires after 30 minutes. Access-token verification, server-side sessions, refresh tokens, logout/revocation, authenticated-route dependencies, and authorization are not implemented yet.
+The access token contains `sub`, `iat`, `exp`, and `type: "access"` claims and currently expires after 30 minutes. Protected endpoints accept it through:
+
+```http
+Authorization: Bearer <access-token>
+```
+
+The backend verifies incoming token signatures, expiration when present, subject, and access-token type, then resolves the subject to the current in-memory user. Server-side sessions, refresh tokens, logout, revocation, issuer/audience checks, and explicit required-claim enforcement are not implemented yet.
 
 ### Task Data Shape
 
@@ -291,11 +309,12 @@ A created task resembles:
   "description": "Implement and test CRUD operations",
   "id": "3156dedf-5fc4-45bb-9a73-52b2882a2d7e",
   "status": "To Do",
-  "createdAt": "2026-08-19T08:26:25.057339+00:00"
+  "createdAt": "2026-08-19T08:26:25.057339+00:00",
+  "userId": "62762ce5-b5d1-4ad4-8d27-3d60ba085a16"
 }
 ```
 
-The server owns the `id`, initial status, and creation timestamp. A partial update can change the name, description, or status:
+The server owns the `id`, initial status, creation timestamp, and `userId`. Ownership is derived from the authenticated user rather than accepted from the task-creation body. A partial update can change the name, description, or status, but not ownership:
 
 ```json
 {
@@ -311,16 +330,20 @@ Suggested local base URL:
 http://localhost:8000
 ```
 
-A basic task lifecycle is:
+A basic authenticated task lifecycle is:
 
-1. `POST /tasks/` to create a task.
-2. `GET /tasks/` to verify it appears in the collection.
-3. `GET /tasks/{task_id}` to retrieve it by ID.
-4. `PATCH /tasks/{task_id}` to edit it or change its column.
-5. `DELETE /tasks/{task_id}` to remove it.
-6. Repeat the GET-by-ID request and expect `404 Not Found`.
+1. `POST /users/` to register a user.
+2. `POST /auth/login` to obtain an access token.
+3. Set `Authorization: Bearer <access-token>` on protected requests.
+4. `GET /users/me` to verify the token resolves to the expected user.
+5. `POST /tasks/` to create a task owned by that user.
+6. `GET /tasks/` to verify the owner-filtered collection.
+7. `GET /tasks/{task_id}` to retrieve the owned task.
+8. `PATCH /tasks/{task_id}` to edit it or change its column.
+9. `DELETE /tasks/{task_id}` to remove it.
+10. Repeat the GET-by-ID request and expect `404 Not Found`.
 
-Because storage is currently in memory, restarting Uvicorn resets this collection.
+Create a second user and token to verify that task collections remain isolated and foreign-owned task operations are rejected. Because storage is currently in memory, restarting Uvicorn resets both users and tasks.
 
 ## Current Data Flows
 
@@ -343,31 +366,33 @@ Postman / HTTP client
     ↓
 FastAPI task, user, and authentication controllers
     ↓
+JWT verification and current-user dependency
+    ↓
 Task, user, and authentication services
     ↓
 In-memory task and user dictionaries
 ```
 
-Backend task and user data survive multiple requests while the server process remains active, but both collections are lost when the server restarts. Account creation hashes passwords before storage; login verifies a supplied password against its stored hash and issues a signed, expiring JWT access token.
+Backend task and user data survive multiple requests while the server process remains active, but both collections are lost when the server restarts. Account creation hashes passwords before storage; login verifies a supplied password and issues a signed, expiring JWT access token. Protected task operations use the authenticated user's ID to enforce ownership.
 
-## Planned User Ownership
+## User and Task Ownership
 
-User records and in-memory CRUD now exist. The next domain milestone is connecting users and tasks through a one-to-many relationship:
+The in-memory backend now models a one-to-many relationship:
 
 ```text
 One User ───── owns ───── Many Tasks
 Each Task ─── belongs to ─── One User
 ```
 
-Planned ownership work includes:
+Implemented ownership behavior includes:
 
-- A required `userId` on each task
-- Validation that a task owner exists before task creation
-- Retrieval of all tasks owned by the authenticated user
-- Authorization that prevents users from reading or changing another user's tasks
-- A defined policy for deleting users who still own tasks
+- A required `userId` on every saved task
+- Server-assigned ownership from the authenticated JWT subject
+- Owner-filtered task collection responses
+- Ownership checks before retrieving, updating, or deleting a task
+- Immutable ownership through the task update contract
 
-Task ownership and authorization are not implemented yet.
+Cross-user task access currently returns `403 Forbidden`. Multi-user authorization regression testing and a deliberate policy for deleting users who still own tasks remain pending. User deletion currently removes the user record without cascading or reassigning owned in-memory tasks.
 
 ## PostgreSQL Goal
 
@@ -406,10 +431,14 @@ Database selection details, schema migrations, connection pooling, and environme
 - [x] Normalize login email and standardize authentication failures
 - [x] Issue signed, expiring JWT access tokens
 - [x] Load JWT configuration from environment variables
-- [ ] Decode and validate access tokens from bearer headers
-- [ ] Add a current-user authentication dependency
-- [ ] Protect API routes with the authenticated-user dependency
-- [ ] Add required one-to-many task ownership and authorization
+- [x] Decode and validate access tokens from bearer headers
+- [x] Add a current-user authentication dependency
+- [x] Add protected `/users/me` profile routes
+- [x] Protect every task route with the authenticated-user dependency
+- [x] Add required one-to-many task ownership and owner-scoped operations
+- [ ] Protect or remove legacy ID-based user routes
+- [ ] Complete multi-user authorization regression testing
+- [ ] Define and enforce account-deletion behavior for owned tasks
 - [ ] Add backend persistence with PostgreSQL and Alembic
 - [ ] Add automated frontend and backend tests
 - [ ] Configure CORS and an API base URL
@@ -421,10 +450,11 @@ Database selection details, schema migrations, connection pooling, and environme
 - The frontend is not connected to the backend.
 - Frontend and backend currently maintain separate task collections.
 - Backend data is lost whenever the server restarts.
-- Login issues an access token, but API routes do not yet validate or require it.
-- No current-user dependency, refresh-token flow, logout, or token revocation is implemented.
-- Task ownership and cross-user authorization are not implemented yet.
+- Login issues access tokens, but refresh-token flow, logout, and token revocation are not implemented.
+- Legacy ID-based user routes remain public and require authorization hardening.
+- User deletion does not yet cascade or reassign owned in-memory tasks.
 - PostgreSQL persistence and Alembic migrations have not been added.
+- Automated multi-user authorization tests have not been added.
 - No token/session authentication or collaborative boards are available.
 - Drag and drop does not reliably support touch or reorder tasks within a column.
 - Search, filters, priorities, labels, and due dates are not implemented.
