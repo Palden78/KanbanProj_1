@@ -158,6 +158,8 @@ async def deleteUserBYID(user_id:str):
         return "User not found"
     else:
         users.pop(user_id)
+        tasks = [ t for t in tasks if t.userId != user_id]
+
 
     return UserResponse(
         id = user.id ,

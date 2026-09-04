@@ -48,7 +48,7 @@ async def updateByID(task_id:str, task_update:T_update, current_user: UserRespon
 
     return res
 
-@Taskrouter.delete("/{task_id}", status_code=202)
+@Taskrouter.delete("/{task_id}", status_code=204)
 async def deleteByID(task_id:str, current_user: UserResponse = Depends(get_current_user)):
     res = await deleteTaskByID(task_id,current_user)
 
