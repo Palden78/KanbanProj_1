@@ -83,7 +83,6 @@ async def UpdateLogic(userID: str, user: UserResponse, updateDetails: UserUpdate
             return "Null email"
 
         normalised_email = str(new_email).lower().strip()
-
         new_email_str = str(normalised_email).lower()
 
         for uid, existing_user in users.items():
@@ -99,8 +98,17 @@ async def UpdateLogic(userID: str, user: UserResponse, updateDetails: UserUpdate
             # Uses setattr() to bypass 'does not support item assignment'
             setattr(user, k, v)
 
+    curr_user = users.get(userID)
+    userToStore = SavedUser(
+        username= curr_user.username,
+        email = new_email_str,
+        id= userID,
+        password_hash = curr_user.password_hash,
+        createdAt = curr_user.createdAt
+    )
+
     #update the in memory user array
-    users[userID] = user 
+    users[userID] = userToStore 
 
     userToRet = UserResponse(
         id = user.id,
@@ -108,7 +116,6 @@ async def UpdateLogic(userID: str, user: UserResponse, updateDetails: UserUpdate
         email = user.email ,
         createdAt = user.createdAt
     )
-
     return userToRet
 
 async def patchMe(user: UserResponse, updateDetails : UserUpdate):
