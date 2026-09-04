@@ -6,6 +6,8 @@
 #
 agent-detector==1.1.0
     # via fastapi-cloud-cli
+alembic==1.19.1
+    # via -r requirements.in
 annotated-doc==0.0.5
     # via
     #   fastapi
@@ -65,12 +67,20 @@ idna==3.19
     #   httpx
 jinja2==3.1.6
     # via fastapi
+mako==1.4.1
+    # via alembic
 markdown-it-py==4.2.0
     # via rich
 markupsafe==3.0.3
-    # via jinja2
+    # via
+    #   jinja2
+    #   mako
 mdurl==0.1.2
     # via markdown-it-py
+psycopg[binary]==3.3.5
+    # via -r requirements.in
+psycopg-binary==3.3.5
+    # via psycopg
 pwdlib[bcrypt]==0.3.1
     # via -r requirements.in
 pydantic[email]==2.13.5
@@ -114,6 +124,10 @@ sentry-sdk==2.68.1
     # via fastapi-cloud-cli
 shellingham==1.5.4
     # via typer
+sqlalchemy==2.0.52
+    # via
+    #   -r requirements.in
+    #   alembic
 starlette==1.6.0
     # via fastapi
 typer==0.27.2
@@ -122,11 +136,13 @@ typer==0.27.2
     #   fastapi-cloud-cli
 typing-extensions==4.16.0
     # via
+    #   alembic
     #   fastapi
     #   pydantic
     #   pydantic-core
     #   pydantic-extra-types
     #   rich-toolkit
+    #   sqlalchemy
     #   typing-inspection
 typing-inspection==0.4.4
     # via
