@@ -1,5 +1,7 @@
-from pydantic import BaseModel, Field
-from typing import Literal, Optional
+from pydantic import BaseModel, EmailStr, Field, SecretStr, ConfigDict
+from typing import Optional, Literal
+from datetime import datetime
+import uuid
 
 TaskStatus = Literal["To Do", "In Progress", "Done"]
 
@@ -9,10 +11,12 @@ class TaskDraft(BaseModel):
     description: str 
 
 class SavedTask(TaskDraft):
-    id: str 
+    id: uuid.UUID
     status : TaskStatus
-    createdAt: str 
-    userId: str = Field(frozen=True)
+    createdAt: datetime 
+    userId: uuid.UUID
+
+    model_config = ConfigDict(from_attributes=True)
 
 class TaskUpdate(BaseModel):
     taskName: Optional[str] = None 

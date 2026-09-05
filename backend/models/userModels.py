@@ -1,5 +1,7 @@
-from pydantic import BaseModel, EmailStr, Field, SecretStr
-from typing import Optional
+from pydantic import BaseModel, EmailStr, Field, SecretStr, ConfigDict
+from typing import Optional, Literal
+from datetime import datetime
+import uuid
 
 """
 For account creation User -> Backend
@@ -13,10 +15,12 @@ class UserCreate(BaseModel):
 For public user response Backend -> User/ Frontend DTO
 """
 class UserResponse(BaseModel):
-    id: str 
+    id: uuid.UUID
     username: str 
     email: EmailStr
-    createdAt: str 
+    createdAt: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 """
 For profile update (User -> Backend)
@@ -30,7 +34,7 @@ class UserUpdate(BaseModel):
 For Internal backend use
 """
 class SavedUser(BaseModel):
-    id: str 
+    id: uuid.UUID
     username: str 
     email: EmailStr
     createdAt: str
