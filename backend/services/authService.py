@@ -7,6 +7,8 @@ import jwt
 import os
 from core.config import JWT_SECRET_KEY, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 from datetime import datetime, timedelta, timezone
+from db.orm_models import User
+from sqlalchemy.orm import Session
 
 def create_access_token(user_id:str)-> str:
      now = datetime.now(timezone.utc)
@@ -26,7 +28,7 @@ def create_access_token(user_id:str)-> str:
      )
      return encoded_jwt
 
-async def loginService(loginReq: LoginRequest):
+def loginService(loginReq: LoginRequest, db:Session):
     Submitted_Email = loginReq.email.lower().strip()
     Submitted_Password = loginReq.password.get_secret_value()
 
@@ -36,47 +38,22 @@ async def loginService(loginReq: LoginRequest):
     """
     Find the internal stored user
     """
-    stored_user = get_user_by_email(Submitted_Email)
+    stored_user = get_user_by_email(Submitted_Email, db)
 
-    if stored_user is None:
+    if stored_user is None or not verify_password(Submitted_Password, stored_user.password_hash):
          return None
 
-    """
-    Retrieve the stored user's password hash
-    """
-    pwdHash = stored_user.password_hash
-    user_id = stored_user.id if hasattr(stored_user, "id") else stored_user["id"]
-    
-    """
-    Call the helper function to verify
-    submitted plaintext password
-    stored password hash
-    """
-    if not pwdHash or not verify_password(Submitted_Password,pwdHash):
-         return None
-    else:
-        access_token = create_access_token(user_id=user_id)
-        #DTO Response
-        retUser = UserResponse(
-            id = stored_user.id ,
-            username = stored_user.username,
-            email= stored_user.email ,
-            createdAt = stored_user.createdAt 
-        )
-        return {
-             "message": "login successful", 
-             "token": Token(access_token= access_token, token_type ="bearer"),
-             "data":retUser
-            }
+    access_token = create_access_token(user_id=str(stored_user.id))
+
+    return {
+        "message": "login successful",
+        "token": Token(access_token=access_token, token_type="bearer"),
+        "data": UserResponse.model_validate(stored_user)
+    }
      
 
-def get_user_by_email(email:str):
+def get_user_by_email(email:str, db:Session):
     NormalisedEmail = email.lower().strip()
-    for user in users.values():
-            user_email = user.get("email") if isinstance(user, dict) else getattr(user, "email", "")
-    
-            if user_email.lower() == NormalisedEmail:
-                return user 
-
-    return None 
+    return db.query(User).filter(User.email == NormalisedEmail).first()
+   
 

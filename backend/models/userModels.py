@@ -18,7 +18,7 @@ class UserResponse(BaseModel):
     id: uuid.UUID
     username: str 
     email: EmailStr
-    createdAt: datetime
+    createdAt: datetime = Field(validation_alias="created_at")
 
     model_config = ConfigDict(from_attributes=True)
 

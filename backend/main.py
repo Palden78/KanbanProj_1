@@ -3,6 +3,10 @@ from pydantic import BaseModel
 from controllers.taskController import Taskrouter as task_router
 from controllers.userController import Userrouter as user_router
 from controllers.authController import LoginRouter as login_router
+from core.database import engine 
+from db.base import Base
+import db.orm_models
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 router = APIRouter()

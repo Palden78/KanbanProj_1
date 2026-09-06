@@ -33,7 +33,7 @@ class Task(Base):
         default = uuid.uuid4
     )
     task_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    description: Mapped[str|None] = mapped_column(String, nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="To Do", nullable=False)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     

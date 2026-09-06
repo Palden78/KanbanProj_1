@@ -1,12 +1,15 @@
 from pwdlib import PasswordHash
 from pwdlib.hashers.bcrypt import BcryptHasher
-
+from uuid import UUID
 import jwt 
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from inMemoryUsers import users
 from models.userModels import UserResponse
 from core.config import JWT_SECRET_KEY, JWT_ALGORITHM
+from sqlalchemy.orm import Session
+from core.database import get_db
+from db.orm_models import User
 
 password_hash_contet = PasswordHash((BcryptHasher(),))
 
@@ -39,22 +42,25 @@ def decode_access_token(token:str) -> dict:
 
 security_scheme = HTTPBearer()
 
-async def get_current_user(
-        credentials: HTTPAuthorizationCredentials = Depends(security_scheme)
-) -> UserResponse:
+def get_current_user(
+        credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+        db: Session = Depends(get_db)
+) -> User:
     token = credentials.credentials
 
     payload = decode_access_token(token)
-    user_id = payload.get("sub")
+    user_id_str = payload.get("sub")
 
-    stored_user = users.get(user_id)
-    if stored_user is None:
+    try:
+        user_uuid = UUID(user_id_str)
+    except(ValueError, TypeError):
         raise cred_exception
 
-    return UserResponse(
-        id=stored_user.id if hasattr(stored_user, "id") else stored_user["id"],
-        username=stored_user.username if hasattr(stored_user, "username") else stored_user["username"],
-        email=stored_user.email if hasattr(stored_user, "email") else stored_user["email"],
-        createdAt=stored_user.createdAt if hasattr(stored_user, "createdAt") else stored_user["createdAt"]
-    )
+    user = db.query(User).filter(User.id == user_uuid).first()
+
+    if user is None:
+        raise cred_exception
+    return user 
+
+   
     
