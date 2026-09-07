@@ -11,14 +11,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # 2. Import your Base, models, and Settings
 from db.base import Base
 import db.orm_models  # Ensures User & Task register with Base.metadata
-from core.config import settings  # Import your FastAPI settings/env loader
+from core.config import DB_URL  # Import your FastAPI settings/env loader
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
 # 3. Dynamically set the database URL from settings (prevents plain-text passwords in alembic.ini)
-config.set_main_option("sqlalchemy.url", str(settings.DATABASE_URL))
+config.set_main_option("sqlalchemy.url", str(DB_URL))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
