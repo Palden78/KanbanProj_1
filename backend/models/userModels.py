@@ -22,6 +22,10 @@ class UserResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class UserCreateRes(BaseModel):
+    username: str
+    email: EmailStr
+
 """
 For profile update (User -> Backend)
 """

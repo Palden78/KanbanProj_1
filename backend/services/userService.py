@@ -1,5 +1,5 @@
 from inMemoryUsers import users
-from models.userModels import UserCreate, UserUpdate, SavedUser, UserResponse
+from models.userModels import UserCreate, UserUpdate, SavedUser, UserResponse, UserCreateRes
 import uuid
 from datetime import datetime,timezone
 from pydantic import ValidationError, TypeAdapter, EmailStr
@@ -30,10 +30,15 @@ def createNewUser(newUser:UserCreate, db:Session):
         password_hash = hash_password(newUser.password.get_secret_value())
     )
 
+    retUser = UserCreateRes(
+        username = newUser.username,
+        email = normalised_email
+    )
+
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    return db_user
+    return retUser
 
 def getUserBYID(userID:str, db:Session):
     user_id = uuid.UUID(userID)
