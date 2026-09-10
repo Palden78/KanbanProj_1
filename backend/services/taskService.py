@@ -1,6 +1,5 @@
 import uuid 
 from datetime import datetime, timezone 
-from inMemoryTasks import tasks
 from models.models import TaskDraft as td, TaskUpdate as T_update
 from models.userModels import UserResponse
 from sqlalchemy.orm import Session
