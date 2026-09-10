@@ -1,5 +1,4 @@
 from models.loginModels import LoginRequest
-from inMemoryUsers import users
 from models.userModels import UserResponse
 from core.security import hash_password, verify_password
 from models.loginModels import Token

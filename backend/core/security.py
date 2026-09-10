@@ -4,7 +4,6 @@ from uuid import UUID
 import jwt 
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from inMemoryUsers import users
 from models.userModels import UserResponse
 from core.config import JWT_SECRET_KEY, JWT_ALGORITHM
 from sqlalchemy.orm import Session

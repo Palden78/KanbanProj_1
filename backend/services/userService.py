@@ -1,10 +1,8 @@
-from inMemoryUsers import users
 from models.userModels import UserCreate, UserUpdate, SavedUser, UserResponse, UserCreateRes
 import uuid
 from datetime import datetime,timezone
 from pydantic import ValidationError, TypeAdapter, EmailStr
 from core.security import hash_password
-from inMemoryUsersWithoutPasswords import UsersWithoutHashPasswords
 from db.orm_models import User
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
