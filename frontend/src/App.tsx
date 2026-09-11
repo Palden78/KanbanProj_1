@@ -1,6 +1,7 @@
 import Board from './components/board'
 import InputForm from './components/InputForm'
-import { 
+import LoginPage from './components/LoginPage'
+import {
     type TaskDraft, type SavedTask,
     type TaskUpdate,
     type TaskStatus
@@ -10,6 +11,7 @@ import { useState , useEffect} from 'react'
 
 
 const App = () => {
+  const [view, setView] = useState<'login' | 'demo-board'>('login')
 
   const [tasks, setTasks] = useState<SavedTask[]>(()=>{
     const savedTasks = localStorage.getItem('tasks');
@@ -49,6 +51,10 @@ const App = () => {
 
   const deleteTask = (taskId:string) =>{
     setTasks(tasks.filter(task=>task.id !== taskId))
+  }
+
+  if (view === 'login') {
+    return <LoginPage onPreviewDemo={() => setView('demo-board')} onLoginSuccess={()=> setView('demo-board')} />
   }
 
   return (

@@ -7,9 +7,22 @@ from core.database import engine
 from db.base import Base
 import db.orm_models
 # Base.metadata.create_all(bind=engine)
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 router = APIRouter()
+
+origins=[
+    "http://localhost:5173"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins = origins,
+    allow_credentials = True,
+    allow_methods = ["*"],
+    allow_headers=["*"]
+)
 
 app.include_router(task_router)
 app.include_router(user_router)

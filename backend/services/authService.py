@@ -47,7 +47,7 @@ def loginService(loginReq: LoginRequest, db:Session):
     return {
         "message": "login successful",
         "token": Token(access_token=access_token, token_type="bearer"),
-        "data": UserResponse.model_validate(stored_user)
+        "user": UserResponse.model_validate(stored_user)
     }
      
 
