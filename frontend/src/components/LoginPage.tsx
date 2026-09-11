@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import LoginForm from './LoginForm'
 import { type LoginCredentials } from '../types'
-import { api } from '../api/client'
 import { loginRequest } from '../api/auth'
 
 type LoginPageProps = {
