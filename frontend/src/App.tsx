@@ -1,3 +1,4 @@
+import { getCurrUser } from './api/auth'
 import Board from './components/board'
 import InputForm from './components/InputForm'
 import LoginPage from './components/LoginPage'
@@ -7,11 +8,14 @@ import {
     type TaskStatus
  } from './types'
 import { useState , useEffect} from 'react'
+import axios from 'axios'
 
 
 
 const App = () => {
   const [view, setView] = useState<'login' | 'demo-board'>('login')
+
+  const [authState, setAuthState] = useState<'checking'|'anonymous'|'authenticated'>('checking')
 
   const [tasks, setTasks] = useState<SavedTask[]>(()=>{
     const savedTasks = localStorage.getItem('tasks');
@@ -30,6 +34,33 @@ const App = () => {
     const jsonArr = JSON.stringify(tasks)
     localStorage.setItem('tasks', jsonArr)
   },[tasks])
+
+  
+
+  useEffect(()=>{
+    const access_token = sessionStorage.getItem('access_token')
+
+    const initializeAuth = async () => {
+    if (access_token) {
+      try {
+        const res = await getCurrUser(access_token);
+        setAuthState('authenticated');
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response?.status === 401) {
+          console.log("Auth failed redirecting to login")
+          sessionStorage.removeItem('access_token')
+          setAuthState('anonymous');
+        }
+      }
+    }
+    if (access_token === null){
+      setAuthState('anonymous')
+      return
+    }
+  }
+    initializeAuth()
+    
+  }, [])
   const handleAddTask = (newTask:TaskDraft) =>(
     setTasks((prevTasks)=>(
       [...prevTasks, {...newTask, 
@@ -53,11 +84,8 @@ const App = () => {
     setTasks(tasks.filter(task=>task.id !== taskId))
   }
 
-  if (view === 'login') {
-    return <LoginPage onPreviewDemo={() => setView('demo-board')} onLoginSuccess={()=> setView('demo-board')} />
-  }
-
-  return (
+  if(view === 'demo-board'){
+    return (
     <main className='min-h-screen bg-slate-100 px-3 py-6 text-slate-900 sm:px-6 sm:py-8 lg:px-8 lg:py-10'>
       <div className='mx-auto max-w-7xl'>
         <header className='mb-6 sm:mb-8'>
@@ -113,6 +141,21 @@ const App = () => {
       </div>
     </main>
   )
+  }
+
+
+  if (authState === 'authenticated'){
+    return (<h1>Authenticated</h1>)
+  }
+  if (authState === 'checking'){
+    return (<h1>Checking</h1>)
+  }
+
+  if (authState === 'anonymous'){
+     return <LoginPage onPreviewDemo={() => setView('demo-board')} onLoginSuccess={()=> setAuthState('authenticated')} />
+  }
+
+  
 }
 
 export default App
