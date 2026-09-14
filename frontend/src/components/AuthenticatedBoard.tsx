@@ -1,16 +1,147 @@
-import React from 'react'
-
+import { useEffect, useState } from 'react'
+import { getAllTasks } from '../api/tasks'
+import axios from 'axios'
+import type { AuthUserTask } from '../types'
+import InputForm from './InputForm'
+import { type TaskDraft } from '../types'
+import { AuthedBoard } from './AuthBoard'
+import { type TaskStatus } from '../types'
+import { type TaskUpdate } from '../types'
 
 type AuthBoardProps = {
   onLogout: () => void
 }
 
+
+
 const AuthenticatedBoard = ({onLogout}:AuthBoardProps) => {
+
+    const [userTasks, setUserTasks] = useState<AuthUserTask[]>([])
+
+
+    const handleAddTask = (newTask:TaskDraft) =>(
+        setUserTasks((prevTasks)=>(
+        [...prevTasks, {...newTask, 
+                id: crypto.randomUUID(),
+                status: "To Do",
+                createdAt: new Date().toISOString()
+            }]
+        ))
+    )
+        
+    const moveTask = (taskId:string, destinationStatus:TaskStatus) =>{
+        setUserTasks(userTasks.map(task => task.id === taskId ? {...task, status:destinationStatus}  : task  ))
+    }
+    const editTask = (taskId:string, updatedFields:TaskUpdate) =>{
+        setUserTasks(userTasks.map(task => task.id === taskId? {...task, ...updatedFields
+        } : task))
+    }
+    const deleteTask = (taskId:string) =>{
+        setUserTasks(userTasks.filter(task=>task.id !== taskId))
+    }
+
+    useEffect(()=>{
+        const token = sessionStorage.getItem('access_token')
+
+        const initializeTasks = async () => {
+            if (!token) {
+                onLogout()
+                return
+            }
+
+            try {
+                const tasks = await getAllTasks(token)
+                console.log(tasks)
+                setUserTasks(tasks)
+            } catch (err) {
+                if (axios.isAxiosError(err) && err.response?.status === 401) {
+                    console.log("Auth failed redirecting to login")
+                    onLogout()
+                    return
+                }
+
+                console.error("Failed to load tasks", err)
+            }
+        }
+
+        initializeTasks()
+    },[onLogout])
+
   return (
-    <div>AuthenticatedBoard
-        <button onClick={onLogout}>Logout</button>
-    </div>
+    <main className='min-h-screen bg-slate-100 px-3 py-6 text-slate-900 sm:px-6 sm:py-8 lg:px-8 lg:py-10'>
+      <div className='mx-auto max-w-7xl'>
+        <header className='mb-6 sm:mb-8'>
+              <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
+                <div>
+                  <p className='mb-2 text-xs font-semibold uppercase tracking-widest text-slate-500 sm:text-sm'>
+                    Workspace
+                  </p>
+
+                  <h1 className='text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl'>
+                    Kanban Board
+                  </h1>
+
+                  <p className='mt-2 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base'>
+                    Keep track of your tasks as they move through each stage.
+                  </p>
+                </div>
+
+                <button
+                  type='button'
+                  onClick={onLogout}
+                  className='self-start rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-4 focus:ring-slate-200'
+                >
+                  Log out
+                </button>
+              </div>
+            </header>
+
+
+        <section className='grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5 lg:grid-cols-3 lg:gap-6'>
+          <AuthedBoard
+            onDelete = {deleteTask}
+            onEdit={editTask}
+            onMove={moveTask}
+            label="To Do"
+            color="rose"
+            tasks={userTasks.filter((task)=>(
+              task.status === "To Do"
+            ))}
+          />
+          <AuthedBoard
+            onDelete = {deleteTask}
+            onEdit={editTask}
+            onMove={moveTask}
+            label="In Progress"
+            tasks={userTasks.filter((task)=>(
+              task.status === "In Progress"
+            ))}
+            color="violet"
+          />
+          <AuthedBoard
+            onEdit={editTask}
+            onDelete = {deleteTask}
+            onMove={moveTask}
+            label="Done"
+            tasks={userTasks.filter((task)=>(
+              task.status === "Done"
+            ))}
+            color="green"
+          />
+        </section>
+
+        <section className='mx-auto mt-6 max-w-xl rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:mt-8 sm:rounded-2xl sm:p-6'>
+          <div className='mb-5'>
+            <h2 className='text-lg font-semibold sm:text-xl'>Create a task</h2>
+            <p className='mt-1 text-sm text-slate-500'>Add a new item to your To Do board.</p>
+          </div>
+          <InputForm onAddTask={handleAddTask}/>
+        </section>
+      </div>
+    </main>
   )
 }
+
+
 
 export default AuthenticatedBoard

@@ -75,7 +75,9 @@ const App = () => {
   }
 
   if (authState === 'authenticated'){
-    return (<AuthenticatedBoard onLogout = {handleLogout}/>)
+    return (<AuthenticatedBoard onLogout = {handleLogout}
+    
+    />)
   }
 
   

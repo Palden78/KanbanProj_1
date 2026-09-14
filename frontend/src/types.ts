@@ -35,3 +35,13 @@ export type LoginResponse = {
     token: TokenResponse;
     user: PublicUser
 }
+
+
+export type AuthUserTask = {
+    task_name : string;
+    description: string;
+    created_at: string;
+    id: string;
+    status: TaskStatus
+    user_id: string 
+}
