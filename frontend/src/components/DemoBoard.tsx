@@ -46,8 +46,8 @@ const DemoBoard = ({onExit}:DemoBoardProps) => {
             }
 
         const deleteTask = (taskId:string) =>{
-    setTasks(tasks.filter(task=>task.id !== taskId))
-  }
+            setTasks(tasks.filter(task=>task.id !== taskId))
+        }
 
 
 

@@ -1,6 +1,13 @@
 # Kanban Task Board
 
-A responsive full-stack Kanban project for organizing tasks across **To Do**, **In Progress**, and **Done**. The React frontend is functional and persists tasks in the browser. A separate FastAPI backend provides task and user APIs, JWT bearer authentication, protected self-service routes, and user-owned tasks, with PostgreSQL persistence now represented through SQLAlchemy and Alembic while frontend integration is developed independently.
+A learning-focused full-stack Kanban application for organizing tasks across **To Do**, **In Progress**, and **Done**.
+
+The project now has two distinct frontend experiences:
+
+- A **demo board** with browser-local task CRUD and `localStorage` persistence.
+- An **authenticated board** connected to the FastAPI backend for login, session validation, and owner-scoped task loading.
+
+Authenticated task-write integration is the current work in progress. The backend CRUD routes already exist, while the frontend create flow is incomplete and edit, move, and delete actions are not yet persisted to the API.
 
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
@@ -11,81 +18,72 @@ A responsive full-stack Kanban project for organizing tasks across **To Do**, **
 
 ## Project Status
 
-| Area | Status |
+| Area | Current status |
 | --- | --- |
-| Frontend | Functional |
-| Browser persistence | Functional with `localStorage` |
-| Drag and drop | Functional between columns |
-| FastAPI task API | CRUD routes use SQLAlchemy-backed services |
-| User CRUD API | Registration and current-user routes use SQLAlchemy-backed services; hardening in progress |
-| Password hashing | Implemented with `pwdlib` |
-| Login | Credential verification and JWT access-token issuance implemented |
-| Bearer-token verification | Implemented with database-backed user lookup |
-| Current-user dependency | Implemented with `/users/me` |
-| Route protection | Task and self-service user routes protected; legacy user routes pending |
-| Task ownership | Required and owner-scoped through `task.user_id` |
-| PostgreSQL persistence | SQLAlchemy models, Psycopg 3 connection, and initial Alembic migration implemented |
-| Frontend/backend integration | Not started |
-| Automated testing | Not implemented |
+| Demo board | Functional local CRUD, movement, drag and drop, and `localStorage` persistence |
+| Authentication UI | Login, session restoration, and logout implemented |
+| Authenticated task reads | `GET /tasks/` integrated and rendered by status |
+| Authenticated task creation | `addTask` helper and initial board call added; response-to-state mapping is incomplete |
+| Authenticated task updates/deletion | Backend routes exist; frontend actions are still React-state-only |
+| Backend task API | Protected CRUD routes implemented with owner enforcement |
+| PostgreSQL persistence | Implemented with SQLAlchemy, Psycopg 3, and Alembic |
+| Backend tests | Initial pytest suite exists using in-memory SQLite; coverage and suite reliability need work |
+| Frontend tests | Not configured |
+| Frontend quality checks | Lint, type-check, and production build are not currently clean |
 
 > [!IMPORTANT]
-> The frontend and backend currently run independently. The frontend still uses browser `localStorage`, while the backend is being exercised through SQLAlchemy and PostgreSQL. The initial Alembic schema and database-backed task/user service paths exist, but full post-migration regression testing and remaining account-route hardening are still pending. The backend verifies bearer tokens and protects all task routes plus `/users/me`; legacy ID-based user routes still require authorization hardening.
+> Frontend/backend integration is **partial**, not absent. `POST /auth/login`, `GET /users/me`, and `GET /tasks/` are connected. The authenticated `POST /tasks/` flow is under active development, while authenticated PATCH and DELETE behavior is not yet wired to the API.
 
-## Implemented Frontend Features
+## Frontend Behavior
 
-- Create tasks with a required name and optional description
-- Organize tasks across **To Do**, **In Progress**, and **Done**
-- Move tasks forward or backward with action buttons
-- Drag tasks directly between columns
-- Edit task names and descriptions inline
-- Delete tasks from the board
-- Display a creation timestamp on every task card
-- Display live task counts and empty-column states
-- Preserve tasks and their current columns across page reloads with `localStorage`
-- Adapt the board across mobile, tablet, and desktop layouts
+### Demo board
 
-### Drag-and-Drop Behavior
+The demo board works without an account or backend connection. It can:
 
-The board uses the browser's native HTML drag-and-drop API:
+- Create tasks with a name and description.
+- Edit and delete tasks.
+- Move tasks with buttons or native HTML drag and drop.
+- Display task counts, timestamps, and empty-column states.
+- Persist tasks and their current statuses in `localStorage`.
+- Adapt across mobile, tablet, and desktop layouts.
 
-- Tasks can move directly between any two columns.
-- Dropping a task into its current column leaves it unchanged.
-- Button controls remain available as an accessible movement alternative.
-- Within-column reordering is not currently supported.
-- Native dragging may be limited on touch devices.
+Within-column reordering is not supported, and native HTML drag and drop may be limited on touch devices.
 
-## Implemented Backend Features
+### Authenticated board
 
-- FastAPI application with generated OpenAPI documentation
-- Pydantic task creation, saved-task, and partial-update models
-- Three validated task statuses: **To Do**, **In Progress**, and **Done**
-- Server-generated UUID task IDs
-- Server-generated UTC creation timestamps
-- SQLAlchemy ORM models for users and tasks
-- SQLAlchemy task and user services using synchronous request-scoped sessions
-- Create, list, retrieve, update, move, and delete operations
-- `404 Not Found` responses for unknown task IDs
-- Request validation through FastAPI and Pydantic
-- Database-backed user creation, listing, and retrieval paths
-- Separate public, stored, create, and update user models
-- Password hashing with `pwdlib`; plaintext passwords are not intentionally stored
-- Email-and-password login credential verification at `POST /auth/login`
-- Generic `401 Unauthorized` responses for invalid login credentials
-- Signed JWT access tokens using PyJWT and HS256
-- Access-token claims for subject, issued time, expiration, and token type
-- Configurable JWT secret, algorithm, expiration, and database URL through environment variables
-- Incoming JWT signature, expiry, subject, and access-token type validation
-- Bearer-token extraction with FastAPI's `HTTPBearer`
-- A current-user dependency that resolves token subjects against the database
-- Protected `GET`, `PATCH`, and `DELETE` operations at `/users/me`
-- Authentication on every task route
-- Server-assigned `userId` ownership on task creation
-- Owner-filtered task listing and ownership checks for single-task operations
-- PostgreSQL connectivity through SQLAlchemy with Psycopg 3
-- Alembic configuration and an initial migration for the `user` and `task` tables
-- A non-null task owner foreign key with an index and `ON DELETE CASCADE` in the initial migration
+The authenticated application currently:
 
-The backend is currently intended for independent API development and manual testing with Postman. It is not yet consumed by the React application. Remaining priorities include hardening legacy user routes, correcting and verifying profile update/delete behavior, completing database-cutover regression testing, enforcing response-model boundaries, and adding automated coverage.
+1. Sends login credentials to `POST /auth/login`.
+2. Stores the returned access token in `sessionStorage` under `access_token`.
+3. Calls `GET /users/me` when restoring a browser session.
+4. Calls protected `GET /tasks/` with `Authorization: Bearer <access-token>`.
+5. Replaces board state with the authenticated user's task array.
+6. Renders backend tasks in their **To Do**, **In Progress**, and **Done** columns.
+7. Clears the token and returns to login on logout or a rejected task-loading token.
+
+The authenticated task-creation handler now calls the `addTask` API helper, but its returned task is not yet mapped into `AuthUserTask` state correctly. Treat this flow as unfinished: the POST request may reach the backend even though the UI does not complete the state update. Authenticated edit, move, drag-and-drop, and delete controls currently change React state only and are reset from backend data on reload.
+
+There is no frontend registration page yet. Create an account through `POST /users/` before using the login form.
+
+## Backend Features
+
+- FastAPI application with generated OpenAPI documentation.
+- Pydantic request validation.
+- SQLAlchemy ORM models and synchronous request-scoped sessions.
+- PostgreSQL connectivity through Psycopg 3.
+- Alembic schema migrations.
+- User registration with normalized email addresses.
+- Password hashing and verification with `pwdlib`/bcrypt.
+- JWT access-token creation and validation with PyJWT.
+- Bearer-token extraction with FastAPI `HTTPBearer`.
+- Database-backed current-user resolution.
+- Protected `/users/me` retrieval, update, and deletion.
+- Protected task create, list, retrieve, update, and delete routes.
+- Server-assigned task IDs, initial status, timestamp, and owner.
+- Owner-filtered task collections and ownership checks for individual tasks.
+- A required indexed task owner foreign key with `ON DELETE CASCADE`.
+
+The active user, authentication, and task services use SQLAlchemy. The earlier in-memory Python storage modules have been removed from the active source code.
 
 ## Technology Stack
 
@@ -94,10 +92,12 @@ The backend is currently intended for independent API development and manual tes
 | Technology | Purpose |
 | --- | --- |
 | [React](https://react.dev/) | Component-based user interface |
-| [TypeScript](https://www.typescriptlang.org/) | Static typing and task models |
+| [TypeScript](https://www.typescriptlang.org/) | Static typing and frontend data models |
 | [Vite](https://vite.dev/) | Development server and production builds |
-| [Tailwind CSS](https://tailwindcss.com/) | Responsive, utility-first styling |
+| [Tailwind CSS](https://tailwindcss.com/) | Responsive utility-first styling |
+| [Axios](https://axios-http.com/) | Authentication and task API requests |
 | [ESLint](https://eslint.org/) | Code-quality checks |
+| Browser storage | Demo tasks in `localStorage`; access token in `sessionStorage` |
 
 ### Backend
 
@@ -107,61 +107,70 @@ The backend is currently intended for independent API development and manual tes
 | [Pydantic](https://docs.pydantic.dev/) | Request validation and data models |
 | [Uvicorn](https://www.uvicorn.org/) | ASGI development server |
 | [`pwdlib`](https://frankie567.github.io/pwdlib/) | Password hashing and verification |
-| [PyJWT](https://pyjwt.readthedocs.io/) | Signed JWT access-token creation and validation |
-| [`python-dotenv`](https://pypi.org/project/python-dotenv/) | Local environment configuration |
-| [SQLAlchemy](https://www.sqlalchemy.org/) | ORM, engine, and synchronous database sessions |
+| [PyJWT](https://pyjwt.readthedocs.io/) | JWT access-token creation and validation |
+| [`python-dotenv`](https://pypi.org/project/python-dotenv/) | Local environment loading |
+| [SQLAlchemy](https://www.sqlalchemy.org/) | ORM, engine, and database sessions |
 | [Psycopg 3](https://www.psycopg.org/psycopg3/) | PostgreSQL driver |
 | PostgreSQL | Durable relational database |
 | [Alembic](https://alembic.sqlalchemy.org/) | Schema migration management |
-| Python | Backend runtime |
+| pytest and SQLite | Current backend test harness |
 
 ## Project Structure
 
 ```text
 KanbanProj_1/
 ├── frontend/
-│   ├── public/                     # Static public assets
 │   ├── src/
-│   │   ├── assets/                 # Image and SVG assets
+│   │   ├── api/
+│   │   │   ├── auth.ts                # Login and current-user requests
+│   │   │   ├── client.ts              # Shared Axios client
+│   │   │   └── tasks.ts               # Authenticated task requests
 │   │   ├── components/
-│   │   │   ├── InputForm.tsx       # Task creation form
-│   │   │   └── board.tsx           # Columns, cards, controls, and drag/drop
-│   │   ├── App.tsx                 # Task operations and local persistence
-│   │   ├── index.css               # Tailwind CSS entry point
-│   │   ├── main.tsx                # React application entry point
-│   │   └── types.ts                # Shared frontend task types
+│   │   │   ├── AuthBoard.tsx          # Authenticated task columns and cards
+│   │   │   ├── AuthenticatedBoard.tsx # Authenticated task state and API loading
+│   │   │   ├── DemoBoard.tsx          # Local demo state and persistence
+│   │   │   ├── InputForm.tsx          # Task creation form
+│   │   │   ├── LoginForm.tsx          # Login form fields
+│   │   │   ├── LoginPage.tsx          # Login and demo entry view
+│   │   │   └── board.tsx              # Demo task columns and cards
+│   │   ├── App.tsx                    # Authentication bootstrap and view selection
+│   │   ├── main.tsx                   # React application entry point
+│   │   ├── index.css                  # Tailwind CSS entry point
+│   │   └── types.ts                   # Frontend request and task types
 │   ├── package.json
 │   └── vite.config.ts
 ├── backend/
 │   ├── controllers/
-│   │   ├── authController.py       # Login HTTP route
-│   │   ├── taskController.py       # Task HTTP routes
-│   │   └── userController.py       # User CRUD routes
+│   │   ├── authController.py          # Login route
+│   │   ├── taskController.py          # Protected task routes
+│   │   └── userController.py          # Registration and user routes
 │   ├── core/
-│   │   ├── config.py               # JWT environment configuration
-│   │   └── security.py             # Password hashing, token handling, and current user
-│   ├── models/
-│   │   ├── loginModels.py          # Login and token response models
-│   │   ├── models.py               # Pydantic task models
-│   │   └── userModels.py           # Public and internal user models
-│   ├── services/
-│   │   ├── authService.py          # Credential verification and JWT issuance
-│   │   ├── taskService.py          # SQLAlchemy-backed task operations
-│   │   └── userService.py          # SQLAlchemy-backed user operations
+│   │   ├── config.py                  # JWT and database configuration
+│   │   ├── database.py                # Engine, session factory, and `get_db`
+│   │   └── security.py                # Password, token, and current-user helpers
 │   ├── db/
-│   │   ├── base.py                 # SQLAlchemy declarative base
-│   │   ├── orm_models.py           # User and Task ORM models
-│   │   └── session.py              # Request-scoped database sessions
-│   ├── alembic/
-│   │   ├── versions/               # Versioned schema migrations
-│   │   └── env.py                  # Alembic metadata and database configuration
+│   │   ├── base.py                    # SQLAlchemy declarative base
+│   │   └── orm_models.py              # User and Task ORM mappings
+│   ├── models/
+│   │   ├── loginModels.py             # Login and token models
+│   │   ├── models.py                  # Task request/update models
+│   │   └── userModels.py              # User request/response models
+│   ├── services/
+│   │   ├── authService.py             # Credential verification and JWT issuance
+│   │   ├── taskService.py             # Owner-scoped SQLAlchemy task operations
+│   │   └── userService.py             # SQLAlchemy user operations
 │   ├── tests/
-│   │   └── db_smoke_test.py        # Manual database connectivity smoke test
-│   ├── inMemoryTasks.py            # Legacy temporary task collection
-│   ├── inMemoryUsers.py            # Legacy temporary user collection
-│   ├── requirements.in             # Direct backend dependencies
-│   ├── requirements.txt            # Pinned backend dependencies
-│   └── main.py                     # FastAPI application entry point
+│   │   ├── conftest.py                # SQLite test database and app overrides
+│   │   ├── test_auth.py               # Authentication tests
+│   │   ├── test_ownership.py          # Task ownership tests
+│   │   └── test_cascade.py            # Account-deletion cascade test
+│   ├── alembic/
+│   │   ├── versions/                  # Versioned schema migrations
+│   │   └── env.py                     # Alembic environment configuration
+│   ├── requirements.in                # Direct runtime dependencies
+│   ├── requirements.txt               # Pinned runtime dependencies
+│   └── main.py                        # FastAPI application entry point
+├── scripts/
 ├── .gitignore
 └── README.md
 ```
@@ -173,19 +182,21 @@ KanbanProj_1/
 - [Git](https://git-scm.com/)
 - [Node.js](https://nodejs.org/) 22.13 or newer
 - npm
-- Python with virtual-environment support—the backend is currently developed with Python 3.14
-- [Postman](https://www.postman.com/) or another HTTP client for manual API testing
+- Python with virtual-environment support; current development uses Python 3.14
+- A running PostgreSQL server for authenticated mode
+- A PostgreSQL database and role with permission to apply the project migration
+- Optional: [Postman](https://www.postman.com/) or another API client
 
-### Clone the Repository
+### Clone the repository
 
 ```bash
 git clone https://github.com/Palden78/KanbanProj_1.git
 cd KanbanProj_1
 ```
 
-## Running the Frontend
+## Run the Demo Board
 
-From the repository root:
+The demo board does not require FastAPI or PostgreSQL.
 
 ```bash
 cd frontend
@@ -193,29 +204,15 @@ npm ci
 npm run dev
 ```
 
-Open the URL printed by Vite, usually [http://localhost:5173](http://localhost:5173).
+Open [http://localhost:5173](http://localhost:5173) and choose the demo-board option from the login page.
 
-### Frontend Scripts
+## Run the Authenticated Application
 
-| Command | Description |
-| --- | --- |
-| `npm run dev` | Start the Vite development server |
-| `npm run build` | Type-check and create a production build |
-| `npm run lint` | Check the source code with ESLint |
-| `npm run preview` | Preview the production build locally |
+Authenticated mode requires PostgreSQL, FastAPI, and the React frontend.
 
-## Running the Backend
+### 1. Configure PostgreSQL and environment variables
 
-From the repository root, create a virtual environment and install the pinned backend dependencies:
-
-```bash
-cd backend
-python3 -m venv venv
-source venv/bin/activate
-python -m pip install -r requirements.txt
-```
-
-Create a root-level `.env` file with the required JWT and PostgreSQL settings before starting the API:
+Create the PostgreSQL database and role first. Then create `.env` in the **repository root** with your own local values:
 
 ```dotenv
 JWT_SECRET=<strong-random-development-secret>
@@ -224,76 +221,98 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 DATABASE_URL=postgresql+psycopg://<user>:<password>@localhost:5432/<database>
 ```
 
-The real `.env` file is ignored by Git. Never commit the JWT secret or database credentials.
+The real `.env` file is ignored by Git. Never commit JWT secrets or database credentials.
 
-From `backend/`, apply the current Alembic migrations before starting the API:
+`JWT_ALGORITHM` and `ACCESS_TOKEN_EXPIRE_MINUTES` are configuration values. HS256 and 30 minutes above are example local settings, not hard-coded token behavior.
+
+### 2. Install and migrate the backend
+
+From the repository root:
 
 ```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+python -m pip install -r requirements.txt
 alembic upgrade head
 ```
 
-The database engine currently uses synchronous SQLAlchemy sessions and Psycopg 3. The migration command owns schema creation; do not rely on `Base.metadata.create_all()` for the application schema.
+Alembic owns the application schema. The production application does not use `Base.metadata.create_all()` to create it.
 
-Start the development server:
+### 3. Start FastAPI
+
+From `backend/` with the virtual environment active:
 
 ```bash
 fastapi dev main.py
 ```
 
-Alternatively, start the application with Uvicorn:
+Or:
 
 ```bash
 python -m uvicorn main:app --reload
 ```
 
-The API normally runs at [http://127.0.0.1:8000](http://127.0.0.1:8000).
+The API is available at [http://localhost:8000](http://localhost:8000), with generated documentation at:
 
-FastAPI provides generated documentation at:
+- Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
+- ReDoc: [http://localhost:8000/redoc](http://localhost:8000/redoc)
+- OpenAPI schema: [http://localhost:8000/openapi.json](http://localhost:8000/openapi.json)
 
-- Swagger UI: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- ReDoc: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
-- OpenAPI schema: [http://127.0.0.1:8000/openapi.json](http://127.0.0.1:8000/openapi.json)
+### 4. Start React in a second terminal
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Use [http://localhost:5173](http://localhost:5173). The backend currently allows that exact CORS origin only; `http://127.0.0.1:5173` or a different Vite port will not match it.
+
+The Axios client currently targets `http://localhost:8000` with a five-second timeout. `VITE_API_BASE_URL` is referenced in the client but is not yet applied as the `baseURL`, so the API address is not currently environment-configurable.
+
+### 5. Create an account and log in
+
+There is no registration form in the frontend yet. Create an account with `POST /users/`, for example through Swagger UI:
+
+```json
+{
+  "username": "example-user",
+  "email": "user@example.com",
+  "password": "at-least-eight-characters"
+}
+```
+
+Then use that email and password on the frontend login page.
+
+## Frontend Scripts
+
+Run these commands from `frontend/`:
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the Vite development server |
+| `npm run build` | Type-check and create a production build |
+| `npm run lint` | Run ESLint across the frontend |
+| `npm run preview` | Preview an existing production build |
+
+At the current development snapshot, lint and build do not pass cleanly. The unfinished authenticated create-task state mapping is one build blocker, and additional unused declarations remain elsewhere in the frontend.
 
 ## Current API
 
-### Health Check
+### Root response
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| `GET` | `/` | Return the FastAPI smoke-test response |
-
-### Tasks
-
-| Method | Endpoint | Auth | Success | Purpose |
-| --- | --- | --- | --- | --- |
-| `GET` | `/tasks/` | Bearer | `200 OK` | Retrieve the current user's tasks |
-| `POST` | `/tasks/` | Bearer | `201 Created` | Create a task owned by the current user |
-| `GET` | `/tasks/{task_id}` | Bearer | `200 OK` | Retrieve an owned task |
-| `PATCH` | `/tasks/{task_id}` | Bearer | `200 OK` | Edit or move an owned task |
-| `DELETE` | `/tasks/{task_id}` | Bearer | `204 No Content` | Delete an owned task |
-
-Missing or invalid authentication returns `401 Unauthorized`. Unknown task IDs return `404 Not Found`, while attempts to access a task owned by another user currently return `403 Forbidden`.
-
-### Users
-
-| Method | Endpoint | Auth | Success | Purpose |
-| --- | --- | --- | --- | --- |
-| `GET` | `/users/` | Public legacy route | `200 OK` | Retrieve users through the current database service path |
-| `POST` | `/users/` | Public | `201 Created` | Create an account |
-| `GET` | `/users/me` | Bearer | `200 OK` | Retrieve the current user |
-| `PATCH` | `/users/me` | Bearer | `200 OK` | Update the current user's profile; verification is pending |
-| `DELETE` | `/users/me` | Bearer | `204 No Content` | Delete the current user; verification is pending |
-| `GET` | `/users/{user_id}` | Public legacy route | `200 OK` | Retrieve one user |
-
-Registration accepts a username, email address, and password. Passwords are hashed before storage by the registration service. Public response models and the remaining user routes still require hardening so that password hashes cannot be exposed. The ID-based user routes remain legacy public routes; prefer the bearer-protected `/users/me` routes. The ID-based `PATCH` and `DELETE` handlers are currently commented out.
+| `GET` | `/` | Return a static welcome response; this is not a database health check |
 
 ### Authentication
 
-| Method | Endpoint | Success | Purpose |
-| --- | --- | --- | --- |
-| `POST` | `/auth/login` | `200 OK` | Verify credentials and issue a JWT access token |
+| Method | Endpoint | Auth | Success | Purpose |
+| --- | --- | --- | --- | --- |
+| `POST` | `/auth/login` | Public | `200 OK` | Verify credentials and issue an access token |
 
-Successful login returns a signed bearer token and public user information:
+Successful login returns the token and public user data under `user`:
 
 ```json
 {
@@ -302,39 +321,68 @@ Successful login returns a signed bearer token and public user information:
     "access_token": "<signed-jwt>",
     "token_type": "bearer"
   },
-  "data": {
+  "user": {
     "id": "<user-id>",
     "username": "<username>",
     "email": "<normalized-email>",
-    "createdAt": "<timestamp>"
+    "createdAt": "<database-generated-timestamp>"
   }
 }
 ```
 
-The access token contains `sub`, `iat`, `exp`, and `type: "access"` claims and currently expires after 30 minutes. Protected endpoints accept it through:
+Protected requests use:
 
 ```http
 Authorization: Bearer <access-token>
 ```
 
-The backend verifies incoming token signatures, expiration when present, subject, and access-token type, then resolves the subject to the current database user. Server-side sessions, refresh tokens, logout, revocation, issuer/audience checks, and explicit required-claim enforcement are not implemented yet.
+Access tokens contain `sub`, `iat`, `exp`, and `type: "access"`. The backend validates the configured signature algorithm, expiration, subject, and access-token type, then resolves the subject to a database user.
 
-### Task Data Shape
+Refresh tokens, server-side logout, revocation, and issuer/audience checks are not implemented.
 
-A created task resembles:
+### Tasks
+
+| Method | Endpoint | Auth | Success | Purpose |
+| --- | --- | --- | --- | --- |
+| `GET` | `/tasks/` | Bearer | `200 OK` | List the current user's tasks |
+| `POST` | `/tasks/` | Bearer | `201 Created` | Create a task owned by the current user |
+| `GET` | `/tasks/{task_id}` | Bearer | `200 OK` | Retrieve an owned task |
+| `PATCH` | `/tasks/{task_id}` | Bearer | `200 OK` | Edit or move an owned task |
+| `DELETE` | `/tasks/{task_id}` | Bearer | `204 No Content` | Delete an owned task |
+
+Missing or invalid authentication returns `401 Unauthorized`. Unknown task IDs return `404 Not Found`. Access to a task owned by another user currently returns `403 Forbidden`.
+
+#### Create-task request
+
+The current Pydantic request uses camelCase and requires both fields. Send an empty string if the task has no description.
 
 ```json
 {
   "taskName": "Build the task API",
-  "description": "Implement and test CRUD operations",
-  "id": "3156dedf-5fc4-45bb-9a73-52b2882a2d7e",
-  "status": "To Do",
-  "createdAt": "2026-08-19T08:26:25.057339+00:00",
-  "userId": "62762ce5-b5d1-4ad4-8d27-3d60ba085a16"
+  "description": "Implement and test CRUD operations"
 }
 ```
 
-The server owns the `id`, initial status, creation timestamp, and `userId`. Ownership is derived from the authenticated user rather than accepted from the task-creation body. A partial update can change the name, description, or status, but not ownership:
+The server assigns `id`, the initial `To Do` status, the creation timestamp, and `user_id` from the authenticated user.
+
+#### Current task response
+
+Task routes currently return raw ORM objects without an explicit response model. The current wire format is therefore snake_case:
+
+```json
+{
+  "id": "3156dedf-5fc4-45bb-9a73-52b2882a2d7e",
+  "task_name": "Build the task API",
+  "description": "Implement and test CRUD operations",
+  "status": "To Do",
+  "created_at": "<database-generated-timestamp>",
+  "user_id": "62762ce5-b5d1-4adf-8d27-3d60ba085a16"
+}
+```
+
+`GET /tasks/` returns a direct array of these objects. The frontend `AuthUserTask` type currently follows this snake_case response.
+
+A partial update can change `taskName`, `description`, or `status`, but not ownership:
 
 ```json
 {
@@ -342,64 +390,65 @@ The server owns the `id`, initial status, creation timestamp, and `userId`. Owne
 }
 ```
 
-## Testing with Postman
+User and task creation timestamps are database-generated. The current database columns are timezone-naive, so the API does not guarantee offset-aware UTC timestamps.
 
-Suggested local base URL:
+### Users
 
-```text
-http://localhost:8000
-```
+| Method | Endpoint | Auth | Success | Purpose |
+| --- | --- | --- | --- | --- |
+| `POST` | `/users/` | Public | `201 Created` | Create an account |
+| `GET` | `/users/me` | Bearer | `200 OK` | Retrieve the current user |
+| `PATCH` | `/users/me` | Bearer | `200 OK` | Update the current user's profile |
+| `DELETE` | `/users/me` | Bearer | `204 No Content` | Delete the current user |
+| `GET` | `/users/` | Public legacy route | `200 OK` | Return raw user ORM records |
+| `GET` | `/users/{user_id}` | Public legacy route | `200 OK` | Return one raw user ORM record |
 
-A basic authenticated task lifecycle is:
+> [!WARNING]
+> `GET /users/` and `GET /users/{user_id}` are currently public and return raw ORM users, including `password_hash`. These routes are an active security limitation and should be protected or removed and given safe response models before deployment.
 
-1. `POST /users/` to register a user.
-2. `POST /auth/login` to obtain an access token.
-3. Set `Authorization: Bearer <access-token>` on protected requests.
-4. `GET /users/me` to verify the token resolves to the expected user.
-5. `POST /tasks/` to create a task owned by that user.
-6. `GET /tasks/` to verify the owner-filtered collection.
-7. `GET /tasks/{task_id}` to retrieve the owned task.
-8. `PATCH /tasks/{task_id}` to edit it or change its column.
-9. `DELETE /tasks/{task_id}` to remove it.
-10. Repeat the GET-by-ID request and expect `404 Not Found`.
+The ID-based user PATCH and DELETE handlers are commented out. Prefer the bearer-protected `/users/me` routes for current-user operations.
 
-Create a second user and token to verify that task collections remain isolated and foreign-owned task operations are rejected. After the database migration, repeat this workflow against a freshly migrated PostgreSQL database; restarting Uvicorn should not be treated as a persistence test. Full Postman regression testing after the database cutover is still pending.
+## Data Flows
 
-## Current Data Flows
-
-### Frontend
+### Demo mode
 
 ```text
 User action
     ↓
 React state
     ↓
-Browser localStorage
+localStorage["tasks"]
 ```
 
-Frontend task data survives page reloads for the same browser profile and origin, but it is not synchronized across users or devices.
-
-### Backend
+### Authenticated read path
 
 ```text
-Postman / HTTP client
-    ↓
-FastAPI task, user, and authentication controllers
-    ↓
-JWT verification and current-user dependency
-    ↓
-Task, user, and authentication services
-    ↓
-Synchronous SQLAlchemy session
-    ↓
-PostgreSQL through Psycopg 3
+Login form
+    ↓ POST /auth/login
+JWT in sessionStorage["access_token"]
+    ↓ GET /users/me on session restoration
+Authenticated board
+    ↓ GET /tasks/
+FastAPI → SQLAlchemy → PostgreSQL
 ```
 
-Account creation hashes passwords before storage; login verifies a supplied password and issues a signed, expiring JWT access token. Protected task operations use the authenticated user's ID to enforce ownership. The legacy in-memory modules remain in the repository as cleanup artifacts, but the SQLAlchemy service paths and migrated database are the intended persistence layer.
+### Authenticated write path
 
-## User and Task Ownership
+```text
+Create task
+    ↓ POST /tasks/ call started
+Response-to-state mapping still incomplete
 
-The backend models a one-to-many relationship in the ORM and initial migration:
+Edit / move / delete
+    ↓
+React state only
+    ↓
+Not persisted; backend data is restored on reload
+```
+
+## Ownership and Persistence
+
+The database schema enforces a many-tasks-to-one-user association through `task.user_id`:
 
 ```text
 One User ───── owns ───── Many Tasks
@@ -408,108 +457,97 @@ Each Task ─── belongs to ─── One User
 user.id  ←── task.user_id
 ```
 
-Implemented ownership behavior includes:
+Current ownership behavior includes:
 
-- A required `userId`/`user_id` association on every saved task
-- Server-assigned ownership from the authenticated JWT subject
-- Owner-filtered task collection responses
-- Ownership checks before retrieving, updating, or deleting a task
-- Immutable ownership through the task update contract
-- A database foreign key with an owner index and `ON DELETE CASCADE` in the initial Alembic migration
+- Server-assigned ownership from the authenticated JWT subject.
+- Owner-filtered task collection responses.
+- Ownership checks before retrieving, updating, or deleting a task.
+- Immutable ownership through the task update contract.
+- An indexed, non-null foreign key with `ON DELETE CASCADE`.
 
-Cross-user task access currently returns `403 Forbidden`. Multi-user authorization regression testing and verification of account deletion with owned tasks remain pending. The database schema is configured to cascade task deletion when a user is deleted, but the current `/users/me` service path passes the public response object where the ORM entity is expected, so profile update/delete behavior must be corrected and tested before this policy is considered complete.
+The initial migration was generated, applied, and exercised manually against PostgreSQL. Automated PostgreSQL and Alembic migration regression coverage is still pending.
 
-## PostgreSQL Persistence
+## Testing
 
-PostgreSQL persistence has been started through SQLAlchemy, Psycopg 3, and Alembic. The backend currently includes:
+Backend test sources currently cover parts of registration, login, JWT rejection, task creation, list isolation, ownership, and intended account-deletion cascading.
 
-- A SQLAlchemy declarative base and ORM models for users and tasks
-- A synchronous engine and request-scoped session dependency
-- Environment-based `DATABASE_URL` configuration
-- Alembic metadata wiring and an initial migration
-- A unique user email constraint
-- A task status check constraint for the three supported columns
-- A required indexed task owner foreign key with `ON DELETE CASCADE`
-- SQLAlchemy queries in the user and task services
+The current test harness:
 
-The initial migration currently creates singular `user` and `task` tables:
+- Uses an in-memory SQLite database with foreign-key enforcement.
+- Overrides FastAPI's `get_db` dependency.
+- Uses `Base.metadata.create_all()` for test setup rather than Alembic.
+- Does not exercise PostgreSQL or migration upgrades/downgrades.
 
-```text
-user
-  id              PRIMARY KEY
-  username
-  email           UNIQUE
-  password_hash
-  created_at
+Do not treat the current suite as fully green or complete:
 
- task
-  id              PRIMARY KEY
-  user_id         NOT NULL, FOREIGN KEY → user.id, ON DELETE CASCADE
-  task_name
-  description
-  status          CHECK ('To Do' | 'In Progress' | 'Done')
-  created_at
+- `pytest` is not included in the backend dependency manifests.
+- The cascade test currently omits the required task `description` and does not reliably reach its intended assertion.
+- Repeated ownership-test function names shadow intended cross-user PATCH and DELETE cases.
+- No frontend test runner or frontend tests are configured.
+
+If pytest is installed in the active backend environment, run the backend suite from `backend/` with:
+
+```bash
+python -m pytest
 ```
-
-The database layer is present, but the cutover is not yet fully verified. Full Postman regression testing, account deletion/cascade verification, response-model hardening, cleanup of legacy in-memory imports/files, and automated regression coverage remain outstanding.
 
 ## Roadmap
 
-- [x] Build the responsive Kanban interface
-- [x] Add task creation, editing, deletion, and button-based movement
-- [x] Add task timestamps
-- [x] Add browser persistence
-- [x] Add cross-column drag and drop
-- [x] Initialize the FastAPI service
-- [x] Define Pydantic task schemas
-- [x] Add in-memory task storage
-- [x] Implement task create and retrieval endpoints
-- [x] Implement task update, movement, and deletion endpoints
-- [ ] Complete full Postman regression testing for task CRUD
-- [x] Add direct and pinned backend dependency manifests
-- [x] Define user schemas and implement user CRUD paths
-- [x] Hash passwords before storing user accounts
-- [x] Add email-and-password login credential verification
-- [x] Normalize login email and standardize authentication failures
-- [x] Issue signed, expiring JWT access tokens
-- [x] Load JWT and database configuration from environment variables
-- [x] Decode and validate access tokens from bearer headers
-- [x] Add a current-user authentication dependency
-- [x] Add protected `/users/me` profile routes
-- [x] Protect every task route with the authenticated-user dependency
-- [x] Add required one-to-many task ownership and owner-scoped operations
-- [x] Add SQLAlchemy ORM models and synchronous database sessions
-- [x] Add Psycopg 3 PostgreSQL connectivity
-- [x] Initialize Alembic and create the initial user/task migration
-- [x] Move task and user service paths to SQLAlchemy queries
-- [ ] Protect or remove legacy ID-based user routes
-- [ ] Correct and verify `/users/me` profile update/delete ORM behavior
-- [ ] Complete multi-user authorization regression testing after database cutover
-- [ ] Verify account-deletion behavior and database cascading for owned tasks
-- [ ] Remove or isolate legacy in-memory storage imports/files
-- [ ] Add automated frontend and backend tests
-- [ ] Configure CORS and an API base URL
-- [ ] Connect the React frontend to FastAPI
-- [ ] Add deployment and continuous-integration configuration
+### Completed milestones
+
+- [x] Build the responsive three-column Kanban interface.
+- [x] Add demo task creation, editing, deletion, movement, and drag and drop.
+- [x] Persist demo tasks in `localStorage`.
+- [x] Build the FastAPI task, user, and authentication routes.
+- [x] Hash passwords and issue signed JWT access tokens.
+- [x] Protect task routes and enforce user-task ownership.
+- [x] Move active backend persistence to SQLAlchemy and PostgreSQL.
+- [x] Add and apply the initial Alembic migration.
+- [x] Correct and manually verify `/users/me` profile update/deletion behavior.
+- [x] Remove the legacy in-memory Python source modules.
+- [x] Add the Axios frontend API client.
+- [x] Configure development CORS for `http://localhost:5173`.
+- [x] Connect frontend login to `POST /auth/login`.
+- [x] Restore sessions through `GET /users/me`.
+- [x] Separate the local demo board from the authenticated board.
+- [x] Load and render owner-scoped tasks through `GET /tasks/`.
+- [x] Add initial backend pytest sources.
+
+### Next steps
+
+- [ ] Complete authenticated task creation and append the returned server task safely.
+- [ ] Connect authenticated edits and movement to `PATCH /tasks/{task_id}`.
+- [ ] Connect authenticated deletion to `DELETE /tasks/{task_id}`.
+- [ ] Standardize task response models and frontend/backend field naming.
+- [ ] Protect or remove the public legacy user routes and prevent password-hash exposure.
+- [ ] Tighten task and user update validation and error handling.
+- [ ] Repair and expand backend authentication, ownership, update, delete, and cascade tests.
+- [ ] Add automated PostgreSQL and Alembic migration tests.
+- [ ] Add frontend unit, component, API-integration, and end-to-end tests.
+- [ ] Restore clean frontend lint, type-check, and production-build results.
+- [ ] Read the frontend API URL from `VITE_API_BASE_URL`.
+- [ ] Make allowed CORS origins configurable.
+- [ ] Add loading states and visible API error feedback.
+- [ ] Add a frontend registration flow.
+- [ ] Add continuous integration and deployment configuration.
 
 ## Current Limitations
 
-- The frontend is not connected to the backend.
-- Frontend and backend currently maintain separate task collections.
-- Full Postman regression testing after the PostgreSQL cutover is still pending.
-- The initial PostgreSQL schema exists, but migration/cutover behavior has not yet been comprehensively verified.
-- `/users/me` profile update and deletion currently require ORM-entity corrections and regression testing.
-- Public user routes and response-model boundaries require hardening to prevent password-hash exposure.
-- Legacy in-memory modules and imports remain and should be removed or isolated once the database path is confirmed.
-- Login issues access tokens, but refresh-token flow, logout, and token revocation are not implemented.
-- Legacy ID-based user routes remain public and require authorization hardening.
-- The database migration declares `ON DELETE CASCADE`, but account deletion and cascade behavior remain unverified.
-- Automated multi-user authorization tests have not been added.
-- No collaborative boards are available.
-- Drag and drop does not reliably support touch or reorder tasks within a column.
-- Search, filters, priorities, labels, and due dates are not implemented.
-- Frontend deletion has no confirmation or undo action.
-- There are no complete automated tests or deployment configuration.
+- Authenticated task creation is incomplete; a POST may succeed before the current UI state update fails.
+- Authenticated edit, movement, drag-and-drop, and deletion are not API-persisted.
+- The frontend API base URL is hardcoded.
+- Backend CORS accepts only the local Vite origin `http://localhost:5173`.
+- There is no frontend account-registration or profile-management UI.
+- Login and task-request failures have limited visible user feedback.
+- Some startup failures can leave the frontend on its checking state.
+- Task routes do not enforce explicit response models and currently return snake_case ORM fields.
+- Public legacy user routes expose password hashes.
+- Backend tests use SQLite rather than PostgreSQL and require repair and broader coverage.
+- Frontend automated tests are absent, and current lint/type-check/build checks are not clean.
+- Refresh tokens, server-side logout, and token revocation are not implemented.
+- Collaborative boards, search, filters, priorities, labels, and due dates are not implemented.
+- Drag and drop does not reliably support touch or within-column reordering.
+- Deployment and continuous integration are not configured.
 
 ## Contributing
 
@@ -519,17 +557,3 @@ Suggestions and improvements are welcome:
 2. Create a feature branch.
 3. Make and test your changes.
 4. Open a pull request explaining what changed.
-
-
-# FOR DEV PUSHING
-# Running from root
-./scripts/quickpush.sh "feat: add user PATCH endpoint fixes"
-
-# Running from inside backend/
-../scripts/quickpush.sh
-
-
-
-
-
-CONSISTENCY IS KEY

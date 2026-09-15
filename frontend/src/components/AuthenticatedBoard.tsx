@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getAllTasks } from '../api/tasks'
+import { addTask, getAllTasks } from '../api/tasks'
 import axios from 'axios'
 import type { AuthUserTask } from '../types'
 import InputForm from './InputForm'
@@ -18,16 +18,20 @@ const AuthenticatedBoard = ({onLogout}:AuthBoardProps) => {
 
     const [userTasks, setUserTasks] = useState<AuthUserTask[]>([])
 
+    const token = sessionStorage.getItem('access_token')
 
-    const handleAddTask = (newTask:TaskDraft) =>(
-        setUserTasks((prevTasks)=>(
-        [...prevTasks, {...newTask, 
-                id: crypto.randomUUID(),
-                status: "To Do",
-                createdAt: new Date().toISOString()
-            }]
-        ))
-    )
+    const handleAddTask = async (newTask:TaskDraft) =>{
+        try{
+            const res = await addTask(token ?? "", newTask)
+            console.log(res)
+            
+            setUserTasks((old) => [...old, res as AuthUserTask]);
+
+        }catch(error){
+            console.error("Failed to add task", error)
+        }
+        
+    }
         
     const moveTask = (taskId:string, destinationStatus:TaskStatus) =>{
         setUserTasks(userTasks.map(task => task.id === taskId ? {...task, status:destinationStatus}  : task  ))
