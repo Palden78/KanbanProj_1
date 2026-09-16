@@ -45,3 +45,13 @@ export type AuthUserTask = {
     status: TaskStatus
     user_id: string 
 }
+
+export type SwitchStatusBody = {
+    taskName: string ;
+    description: string;
+    status: TaskStatus
+}
+
+export type deleteTaskBody ={
+    task_id : string;
+}

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
-import { addTask, getAllTasks } from '../api/tasks'
+import { addTask, deleteTaskByID, editTaskDetails, getAllTasks, moveTaskByStatus } from '../api/tasks'
 import axios from 'axios'
-import type { AuthUserTask } from '../types'
+import type { AuthUserTask, SwitchStatusBody } from '../types'
 import InputForm from './InputForm'
 import { type TaskDraft } from '../types'
 import { AuthedBoard } from './AuthBoard'
 import { type TaskStatus } from '../types'
 import { type TaskUpdate } from '../types'
+
 
 type AuthBoardProps = {
   onLogout: () => void
@@ -33,15 +34,62 @@ const AuthenticatedBoard = ({onLogout}:AuthBoardProps) => {
         
     }
         
-    const moveTask = (taskId:string, destinationStatus:TaskStatus) =>{
-        setUserTasks(userTasks.map(task => task.id === taskId ? {...task, status:destinationStatus}  : task  ))
+    const moveTask = async (taskId:string, destinationStatus:TaskStatus) =>{
+        try{
+            const refTask = userTasks.filter(task=> task.id ===taskId)
+            const movedTask:SwitchStatusBody = {
+                taskName : refTask[0].task_name,
+                description : refTask[0].description,
+                status : destinationStatus
+            }
+            const res = await moveTaskByStatus(
+                token ?? "",
+                movedTask,
+                taskId
+            )
+            console.log(res)
+            
+            setUserTasks(userTasks.map(task => task.id === taskId ? {...task, status:destinationStatus}  : task  ))
+
+        }catch(err){
+            console.error("Failed to move task", err)
+        }
     }
-    const editTask = (taskId:string, updatedFields:TaskUpdate) =>{
-        setUserTasks(userTasks.map(task => task.id === taskId? {...task, ...updatedFields
-        } : task))
+    const editTask = async (taskId:string, updatedFields:TaskUpdate) =>{
+        try{
+            const refTask = userTasks.filter(task=> task.id ===taskId)
+            const updatedTask:SwitchStatusBody = {
+                taskName : updatedFields.taskName??'',
+                description : updatedFields.description??'',
+                status : refTask[0].status
+            }
+            const res = await editTaskDetails(
+                token ?? "",
+                updatedTask,
+                taskId
+            )
+            console.log(res)
+            setUserTasks(userTasks.map(task => task.id === taskId? {...task, ...updatedFields
+            } : task))
+        }catch(error){
+            console.error("Failed to edit task", error)
+        }
+        
     }
-    const deleteTask = (taskId:string) =>{
-        setUserTasks(userTasks.filter(task=>task.id !== taskId))
+    const deleteTask = async (taskId:string) =>{
+        try{
+            const res = await deleteTaskByID(
+                token ?? "",
+                {
+                    task_id: taskId
+                },
+                taskId
+            )
+            console.log(res)
+            setUserTasks(userTasks.filter(task=>task.id !== taskId))
+        }catch(error){
+            console.error("Failed to delete task", error)
+        }
     }
 
     useEffect(()=>{
