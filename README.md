@@ -5,9 +5,9 @@ A learning-focused full-stack Kanban application for organizing tasks across **T
 The project now has two distinct frontend experiences:
 
 - A **demo board** with browser-local task CRUD and `localStorage` persistence.
-- An **authenticated board** connected to the FastAPI backend for login, session validation, and owner-scoped task loading.
+- An **authenticated board** connected to FastAPI for login, session validation, and owner-scoped task CRUD.
 
-Authenticated task-write integration is the current work in progress. The backend CRUD routes already exist, while the frontend create flow is incomplete and edit, move, and delete actions are not yet persisted to the API.
+The authenticated frontend now loads, creates, edits, moves, and deletes tasks through the existing protected API routes. The next integration work is focused on stronger error feedback, consistent task-field mapping, and automated coverage.
 
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
@@ -21,18 +21,19 @@ Authenticated task-write integration is the current work in progress. The backen
 | Area | Current status |
 | --- | --- |
 | Demo board | Functional local CRUD, movement, drag and drop, and `localStorage` persistence |
-| Authentication UI | Login, session restoration, and logout implemented |
+| Authentication UI | Login, visible invalid-credential feedback, session restoration, and logout implemented |
 | Authenticated task reads | `GET /tasks/` integrated and rendered by status |
-| Authenticated task creation | `addTask` helper and initial board call added; response-to-state mapping is incomplete |
-| Authenticated task updates/deletion | Backend routes exist; frontend actions are still React-state-only |
+| Authenticated task creation | `POST /tasks/` integrated; the returned server task is appended to the board |
+| Authenticated task updates | Edits, button movement, and drag and drop persist through `PATCH /tasks/{task_id}` |
+| Authenticated task deletion | `DELETE /tasks/{task_id}` integrated; successful deletion removes the task from the board |
 | Backend task API | Protected CRUD routes implemented with owner enforcement |
 | PostgreSQL persistence | Implemented with SQLAlchemy, Psycopg 3, and Alembic |
-| Backend tests | Initial pytest suite exists using in-memory SQLite; coverage and suite reliability need work |
+| Backend tests | Latest verified run: 8 passed and 1 failed using in-memory SQLite |
 | Frontend tests | Not configured |
 | Frontend quality checks | Lint, type-check, and production build are not currently clean |
 
 > [!IMPORTANT]
-> Frontend/backend integration is **partial**, not absent. `POST /auth/login`, `GET /users/me`, and `GET /tasks/` are connected. The authenticated `POST /tasks/` flow is under active development, while authenticated PATCH and DELETE behavior is not yet wired to the API.
+> Frontend task CRUD is now API-connected. The board loads with `GET /tasks/`, creates with `POST /tasks/`, persists edits and status changes with `PATCH /tasks/{task_id}`, and deletes with `DELETE /tasks/{task_id}`. The individual `GET /tasks/{task_id}` route exists in the backend but is not needed by the current collection-based board UI.
 
 ## Frontend Behavior
 
@@ -53,15 +54,18 @@ Within-column reordering is not supported, and native HTML drag and drop may be 
 
 The authenticated application currently:
 
-1. Sends login credentials to `POST /auth/login`.
+1. Sends login credentials to `POST /auth/login` and displays a generic invalid-email-or-password message when login fails.
 2. Stores the returned access token in `sessionStorage` under `access_token`.
 3. Calls `GET /users/me` when restoring a browser session.
 4. Calls protected `GET /tasks/` with `Authorization: Bearer <access-token>`.
-5. Replaces board state with the authenticated user's task array.
-6. Renders backend tasks in their **To Do**, **In Progress**, and **Done** columns.
-7. Clears the token and returns to login on logout or a rejected task-loading token.
+5. Replaces board state with the authenticated user's task array and renders tasks by status.
+6. Creates tasks through `POST /tasks/` and appends the returned server task.
+7. Persists title, description, and status updates through `PATCH /tasks/{task_id}`.
+8. Uses the same PATCH flow for movement buttons and drag-and-drop status changes.
+9. Deletes tasks through `DELETE /tasks/{task_id}` and removes them from state after success.
+10. Clears the token and returns to login on logout or a rejected task-loading token.
 
-The authenticated task-creation handler now calls the `addTask` API helper, but its returned task is not yet mapped into `AuthUserTask` state correctly. Treat this flow as unfinished: the POST request may reach the backend even though the UI does not complete the state update. Authenticated edit, move, drag-and-drop, and delete controls currently change React state only and are reset from backend data on reload.
+Mutation failures are currently logged to the browser console. One field-mapping issue remains after title edits: the backend update succeeds, but the card can continue showing its previous title until the task collection is loaded again.
 
 There is no frontend registration page yet. Create an account through `POST /users/` before using the login form.
 
@@ -127,7 +131,7 @@ KanbanProj_1/
 │   │   │   └── tasks.ts               # Authenticated task requests
 │   │   ├── components/
 │   │   │   ├── AuthBoard.tsx          # Authenticated task columns and cards
-│   │   │   ├── AuthenticatedBoard.tsx # Authenticated task state and API loading
+│   │   │   ├── AuthenticatedBoard.tsx # Task loading and API-backed mutations
 │   │   │   ├── DemoBoard.tsx          # Local demo state and persistence
 │   │   │   ├── InputForm.tsx          # Task creation form
 │   │   │   ├── LoginForm.tsx          # Login form fields
@@ -296,7 +300,7 @@ Run these commands from `frontend/`:
 | `npm run lint` | Run ESLint across the frontend |
 | `npm run preview` | Preview an existing production build |
 
-At the current development snapshot, lint and build do not pass cleanly. The unfinished authenticated create-task state mapping is one build blocker, and additional unused declarations remain elsewhere in the frontend.
+At the current development snapshot, lint and build do not pass cleanly. The remaining reported issues are unused imports, variables, and expressions; the authenticated task CRUD integration itself is no longer blocked by the earlier create-task state mapping.
 
 ## Current API
 
@@ -432,18 +436,27 @@ Authenticated board
 FastAPI → SQLAlchemy → PostgreSQL
 ```
 
-### Authenticated write path
+### Authenticated write paths
 
 ```text
 Create task
-    ↓ POST /tasks/ call started
-Response-to-state mapping still incomplete
+    ↓ POST /tasks/
+FastAPI → SQLAlchemy → PostgreSQL
+    ↓
+Append the returned server task to React state
 
-Edit / move / delete
+Edit title or description
+Move with buttons or drag and drop
+    ↓ PATCH /tasks/{task_id}
+FastAPI → SQLAlchemy → PostgreSQL
     ↓
-React state only
+Update React state after success
+
+Delete task
+    ↓ DELETE /tasks/{task_id}
+FastAPI → SQLAlchemy → PostgreSQL
     ↓
-Not persisted; backend data is restored on reload
+Remove the task from React state after success
 ```
 
 ## Ownership and Persistence
@@ -478,11 +491,11 @@ The current test harness:
 - Uses `Base.metadata.create_all()` for test setup rather than Alembic.
 - Does not exercise PostgreSQL or migration upgrades/downgrades.
 
-Do not treat the current suite as fully green or complete:
+The latest verified backend run completed with **8 passed and 1 failed**. Do not treat the suite as fully green or complete:
 
 - `pytest` is not included in the backend dependency manifests.
-- The cascade test currently omits the required task `description` and does not reliably reach its intended assertion.
-- Repeated ownership-test function names shadow intended cross-user PATCH and DELETE cases.
+- The failing cascade test omits the required task `description`, receives a validation response, and fails before its intended cascade assertion.
+- Repeated ownership-test function names mean Python collects only the final same-named case; cross-user PATCH and DELETE tests are currently absent.
 - No frontend test runner or frontend tests are configured.
 
 If pytest is installed in the active backend environment, run the backend suite from `backend/` with:
@@ -511,13 +524,15 @@ python -m pytest
 - [x] Restore sessions through `GET /users/me`.
 - [x] Separate the local demo board from the authenticated board.
 - [x] Load and render owner-scoped tasks through `GET /tasks/`.
+- [x] Create authenticated tasks through `POST /tasks/` and append the server response.
+- [x] Persist authenticated edits, button movement, and drag-and-drop movement through `PATCH /tasks/{task_id}`.
+- [x] Persist authenticated deletion through `DELETE /tasks/{task_id}`.
+- [x] Display a visible message when login fails.
 - [x] Add initial backend pytest sources.
 
 ### Next steps
 
-- [ ] Complete authenticated task creation and append the returned server task safely.
-- [ ] Connect authenticated edits and movement to `PATCH /tasks/{task_id}`.
-- [ ] Connect authenticated deletion to `DELETE /tasks/{task_id}`.
+- [ ] Fix immediate title rendering after authenticated task edits.
 - [ ] Standardize task response models and frontend/backend field naming.
 - [ ] Protect or remove the public legacy user routes and prevent password-hash exposure.
 - [ ] Tighten task and user update validation and error handling.
@@ -527,18 +542,21 @@ python -m pytest
 - [ ] Restore clean frontend lint, type-check, and production-build results.
 - [ ] Read the frontend API URL from `VITE_API_BASE_URL`.
 - [ ] Make allowed CORS origins configurable.
-- [ ] Add loading states and visible API error feedback.
+- [ ] Add loading states and visible task-loading and mutation error feedback.
+- [ ] Distinguish invalid credentials from network and server failures in the login UI.
 - [ ] Add a frontend registration flow.
-- [ ] Add continuous integration and deployment configuration.
+- [ ] Add containerization for reproducible local and deployment environments.
+- [ ] Add continuous-integration configuration.
+- [ ] Add deployment configuration.
 
 ## Current Limitations
 
-- Authenticated task creation is incomplete; a POST may succeed before the current UI state update fails.
-- Authenticated edit, movement, drag-and-drop, and deletion are not API-persisted.
+- Authenticated title edits persist to the backend, but the card can retain its previous title until tasks are reloaded because the update and rendered task fields use different casing.
+- Task loading and mutation failures are logged to the console rather than shown in the board UI.
+- Login failures are visible, but network and server errors currently use the same “Invalid email or password” message as rejected credentials.
 - The frontend API base URL is hardcoded.
 - Backend CORS accepts only the local Vite origin `http://localhost:5173`.
 - There is no frontend account-registration or profile-management UI.
-- Login and task-request failures have limited visible user feedback.
 - Some startup failures can leave the frontend on its checking state.
 - Task routes do not enforce explicit response models and currently return snake_case ORM fields.
 - Public legacy user routes expose password hashes.
@@ -547,7 +565,7 @@ python -m pytest
 - Refresh tokens, server-side logout, and token revocation are not implemented.
 - Collaborative boards, search, filters, priorities, labels, and due dates are not implemented.
 - Drag and drop does not reliably support touch or within-column reordering.
-- Deployment and continuous integration are not configured.
+- Containerization, continuous integration, and deployment are not configured.
 
 ## Contributing
 
