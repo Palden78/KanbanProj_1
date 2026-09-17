@@ -11,6 +11,7 @@ type LoginPageProps = {
 const LoginPage = ({ onPreviewDemo , onLoginSuccess}: LoginPageProps) => {
   const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(false)  
+  const [invalidEmailPasswordFlag, setInvalidEmailPasswordFlag] = useState(true)
 
   
 
@@ -23,6 +24,7 @@ const LoginPage = ({ onPreviewDemo , onLoginSuccess}: LoginPageProps) => {
       onLoginSuccess()
 
     } catch (error) {
+      setInvalidEmailPasswordFlag(false)
       console.log('login failed')
     } finally{
       setLoading(false)
@@ -81,7 +83,7 @@ const LoginPage = ({ onPreviewDemo , onLoginSuccess}: LoginPageProps) => {
             </div>
 
             <div className='rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7'>
-              <LoginForm onSubmit={handleSubmit} isSubmitting={loading} />
+              <LoginForm onSubmit={handleSubmit} isSubmitting={loading} emailAndPassIsValid={invalidEmailPasswordFlag}/>
 
               {notice && (
                 <p role='status' aria-live='polite' className='mt-4 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-xs font-medium leading-relaxed text-violet-800'>

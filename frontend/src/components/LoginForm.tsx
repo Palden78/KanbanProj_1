@@ -8,6 +8,7 @@ type LoginCredentials = {
 type LoginFormProps = {
   onSubmit: (credentials: LoginCredentials) => void
   isSubmitting: boolean
+  emailAndPassIsValid: boolean
 }
 
 type LoginErrors = {
@@ -15,7 +16,7 @@ type LoginErrors = {
   password?: string
 }
 
-const LoginForm = ({ onSubmit, isSubmitting }: LoginFormProps ) => {
+const LoginForm = ({ onSubmit, isSubmitting ,emailAndPassIsValid}: LoginFormProps ) => {
   const [formData, setFormData] = useState<LoginCredentials>({
     email: '',
     password: '',
@@ -91,6 +92,7 @@ const LoginForm = ({ onSubmit, isSubmitting }: LoginFormProps ) => {
             {errors.email}
           </p>
         )}
+        {}
       </div>
 
       <div className='space-y-2'>
@@ -122,6 +124,13 @@ const LoginForm = ({ onSubmit, isSubmitting }: LoginFormProps ) => {
             {errors.password}
           </p>
         )}
+
+        {!emailAndPassIsValid &&(
+          <p id='login-password-error' role='alert' className='text-xs font-medium text-red-600'>
+            Invalid email or password
+          </p>
+        ) }
+        
       </div>
 
       <button
