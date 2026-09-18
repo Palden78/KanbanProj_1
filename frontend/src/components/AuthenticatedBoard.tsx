@@ -69,8 +69,20 @@ const AuthenticatedBoard = ({onLogout}:AuthBoardProps) => {
                 taskId
             )
             console.log(res)
-            setUserTasks(userTasks.map(task => task.id === taskId? {...task, ...updatedFields
-            } : task))
+            
+            setUserTasks(userTasks.map(task => {
+            if (task.id === taskId) {
+                return { 
+                    ...task, 
+                    // Map camelCase payload to whatever casing your UI uses:
+                    // Change these keys to match exactly what your Task card renders!
+                    title: updatedTask.taskName,          // If UI uses 'title'
+                    task_name: updatedTask.taskName,      // If UI uses snake_case
+                    description: updatedTask.description  
+                };
+            }
+            return task;
+        }));
         }catch(error){
             console.error("Failed to edit task", error)
         }

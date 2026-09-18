@@ -1,12 +1,5 @@
 import { getCurrUser } from './api/auth'
-import Board from './components/board'
-import InputForm from './components/InputForm'
 import LoginPage from './components/LoginPage'
-import {
-    type TaskDraft, type SavedTask,
-    type TaskUpdate,
-    type TaskStatus
- } from './types'
 import { useState , useEffect} from 'react'
 import axios from 'axios'
 import DemoBoard from './components/DemoBoard'
