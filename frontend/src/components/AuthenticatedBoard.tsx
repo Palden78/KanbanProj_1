@@ -11,11 +11,12 @@ import { type TaskUpdate } from '../types'
 
 type AuthBoardProps = {
   onLogout: () => void
+  onOpenAccount: () => void
 }
 
 
 
-const AuthenticatedBoard = ({onLogout}:AuthBoardProps) => {
+const AuthenticatedBoard = ({onLogout, onOpenAccount}:AuthBoardProps) => {
 
     const [userTasks, setUserTasks] = useState<AuthUserTask[]>([])
 
@@ -150,13 +151,22 @@ const AuthenticatedBoard = ({onLogout}:AuthBoardProps) => {
                   </p>
                 </div>
 
-                <button
-                  type='button'
-                  onClick={onLogout}
-                  className='self-start rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-4 focus:ring-slate-200'
-                >
-                  Log out
-                </button>
+                <nav aria-label='Workspace navigation' className='flex self-start gap-2'>
+                  <button
+                    type='button'
+                    onClick={onOpenAccount}
+                    className='rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 focus:outline-none focus:ring-4 focus:ring-slate-200'
+                  >
+                    Account
+                  </button>
+                  <button
+                    type='button'
+                    onClick={onLogout}
+                    className='rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-4 focus:ring-slate-200'
+                  >
+                    Log out
+                  </button>
+                </nav>
               </div>
             </header>
 

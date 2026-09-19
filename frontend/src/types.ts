@@ -18,6 +18,17 @@ export type LoginCredentials = {
     password:string;
 }
 
+export type RegistrationValues = {
+    username: string;
+    email: string;
+    password: string;
+}
+
+export type ProfileFormValues = {
+    username: string;
+    email: string;
+}
+
 export type TokenResponse ={
     access_token: string;
     token_type: string;

@@ -1,9 +1,5 @@
-import { useState, type ChangeEvent, type FormEvent, type SubmitEvent} from 'react'
-
-type LoginCredentials = {
-  email: string
-  password: string
-}
+import { useState, type ChangeEvent, type SubmitEvent} from 'react'
+import type { LoginCredentials } from '../types'
 
 type LoginFormProps = {
   onSubmit: (credentials: LoginCredentials) => void
@@ -144,5 +140,4 @@ const LoginForm = ({ onSubmit, isSubmitting ,emailAndPassIsValid}: LoginFormProp
   )
 }
 
-export type { LoginCredentials }
 export default LoginForm

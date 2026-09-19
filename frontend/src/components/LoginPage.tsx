@@ -1,32 +1,33 @@
 import { useState } from 'react'
 import LoginForm from './LoginForm'
-import { type LoginCredentials } from '../types'
+import { type LoginCredentials, type PublicUser } from '../types'
 import { loginRequest } from '../api/auth'
 
 type LoginPageProps = {
   onPreviewDemo: () => void
-  onLoginSuccess: ()=> void
+  onCreateAccount: () => void
+  onLoginSuccess: (user: PublicUser) => void
 }
 
-const LoginPage = ({ onPreviewDemo , onLoginSuccess}: LoginPageProps) => {
-  const [notice, setNotice] = useState('')
-  const [loading, setLoading] = useState(false)  
+const LoginPage = ({ onPreviewDemo, onCreateAccount, onLoginSuccess }: LoginPageProps) => {
+  const [loading, setLoading] = useState(false)
   const [invalidEmailPasswordFlag, setInvalidEmailPasswordFlag] = useState(true)
 
   
 
   const handleSubmit = async (formData:LoginCredentials) => {
     setLoading(true)
+    setInvalidEmailPasswordFlag(true)
+
     try {
       const res = await loginRequest(formData)
       const token = res.token.access_token
       sessionStorage.setItem('access_token', token)
-      onLoginSuccess()
-
-    } catch (error) {
+      onLoginSuccess(res.user)
+    } catch {
       setInvalidEmailPasswordFlag(false)
       console.log('login failed')
-    } finally{
+    } finally {
       setLoading(false)
     }
   }
@@ -84,18 +85,23 @@ const LoginPage = ({ onPreviewDemo , onLoginSuccess}: LoginPageProps) => {
 
             <div className='rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7'>
               <LoginForm onSubmit={handleSubmit} isSubmitting={loading} emailAndPassIsValid={invalidEmailPasswordFlag}/>
+            </div>
 
-              {notice && (
-                <p role='status' aria-live='polite' className='mt-4 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-xs font-medium leading-relaxed text-violet-800'>
-                  {notice}
-                </p>
-              )}
+            <div className='mt-5 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-center'>
+              <p className='text-sm text-violet-900'>New to Kanban?</p>
+              <button
+                type='button'
+                onClick={onCreateAccount}
+                className='mt-1 font-semibold text-violet-900 underline decoration-violet-300 underline-offset-4 transition hover:decoration-violet-900 focus:outline-none focus:ring-4 focus:ring-violet-200'
+              >
+                Create an account
+              </button>
             </div>
 
             <button
               type='button'
               onClick={onPreviewDemo}
-              className='mt-5 w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:bg-white hover:text-slate-900 focus:outline-none focus:ring-4 focus:ring-slate-200'
+              className='mt-4 w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:bg-white hover:text-slate-900 focus:outline-none focus:ring-4 focus:ring-slate-200'
             >
               Preview demo board
             </button>
