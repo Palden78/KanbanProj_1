@@ -1,8 +1,15 @@
 
 import { api } from "./client";
 
-import { type LoginResponse, type LoginCredentials, type PublicUser } from "../types";
+import { type LoginResponse, type LoginCredentials, type PublicUser, type RegistrationValues } from "../types";
 
+export const createNewUser = async(regValues: RegistrationValues)=>{
+    const res = await api.post(
+        "/users/",
+        regValues
+    )
+    return res.data
+}
 
 export const loginRequest = async (cred:LoginCredentials) =>{
     const res = await api.post<LoginResponse>(
@@ -22,3 +29,4 @@ export const getCurrUser = async (token:string)=>{
     )
     return res.data
 }
+

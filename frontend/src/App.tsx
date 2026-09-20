@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import axios from 'axios'
-import { getCurrUser } from './api/auth'
+import { createNewUser, getCurrUser } from './api/auth'
 import AccountPage from './components/AccountPage'
 import AuthenticatedBoard from './components/AuthenticatedBoard'
 import DemoBoard from './components/DemoBoard'
 import LoginPage from './components/LoginPage'
 import RegistrationPage from './components/RegistrationPage'
-import type { PublicUser } from './types'
+import type { ProfileFormValues, PublicUser, RegistrationValues } from './types'
+import { updateUserInfo } from './api/user'
 
 type PublicView = 'login' | 'register' | 'demo-board'
 type AuthenticatedView = 'board' | 'account'
@@ -18,6 +19,7 @@ type AuthState =
 
 const App = () => {
   const [publicView, setPublicView] = useState<PublicView>('login')
+  const [saving, setSaving] = useState<boolean>(false)
   const [authenticatedView, setAuthenticatedView] = useState<AuthenticatedView>('board')
   const [authState, setAuthState] = useState<AuthState>({ status: 'checking' })
 
@@ -65,6 +67,33 @@ const App = () => {
     setPublicView('login')
   }
 
+  const handleRegister = async (values: RegistrationValues)=>{
+    try{
+      const res = await createNewUser(values)
+      console.log(res)
+      setPublicView('login')
+    }catch(error){
+      console.error(error)
+    }
+  }
+
+  const handleUpdateUser = async(updateVals: ProfileFormValues)=>{
+    try{
+      const accessToken = sessionStorage.getItem('access_token') ?? '';
+      setSaving(true)
+      const res = await updateUserInfo(accessToken, updateVals)
+      setAuthState((prev) => ({
+        ...prev,
+        user: res, // Adjust this based on your exact API response structure
+      }));
+      console.log(res)
+    }catch(error){
+      console.error(error)
+    } finally{
+      setSaving(false)
+    }
+  }
+
   if (publicView === 'demo-board') {
     return <DemoBoard onExit={handleExitDemo}/>
   }
@@ -82,7 +111,7 @@ const App = () => {
 
   if (authState.status === 'anonymous') {
     if (publicView === 'register') {
-      return <RegistrationPage onBackToLogin={() => setPublicView('login')}/>
+      return <RegistrationPage onBackToLogin={() => setPublicView('login')} onRegister={handleRegister}/>
     }
 
     return (
@@ -100,6 +129,8 @@ const App = () => {
         user={authState.user}
         onBackToBoard={() => setAuthenticatedView('board')}
         onLogout={handleLogout}
+        onSaveProfile={handleUpdateUser}
+        isSaving = {saving}
       />
     )
   }
