@@ -7,7 +7,7 @@ import DemoBoard from './components/DemoBoard'
 import LoginPage from './components/LoginPage'
 import RegistrationPage from './components/RegistrationPage'
 import type { ProfileFormValues, PublicUser, RegistrationValues } from './types'
-import { updateUserInfo } from './api/user'
+import { deleteUser, updateUserInfo } from './api/user'
 
 type PublicView = 'login' | 'register' | 'demo-board'
 type AuthenticatedView = 'board' | 'account'
@@ -22,6 +22,7 @@ const App = () => {
   const [saving, setSaving] = useState<boolean>(false)
   const [authenticatedView, setAuthenticatedView] = useState<AuthenticatedView>('board')
   const [authState, setAuthState] = useState<AuthState>({ status: 'checking' })
+  const [deleting, setDeleting] = useState<boolean>(false)
 
   useEffect(() => {
     const accessToken = sessionStorage.getItem('access_token')
@@ -94,6 +95,19 @@ const App = () => {
     }
   }
 
+  const handleDeleteUser = async ()=>{
+    try{
+      const accessToken = sessionStorage.getItem('access_token') ?? '';
+      setDeleting(true)
+      const res = deleteUser(accessToken)
+      console.log(res)
+    }catch(error){
+      console.error(error)
+    }finally{
+      setDeleting(false)
+    }
+  }
+
   if (publicView === 'demo-board') {
     return <DemoBoard onExit={handleExitDemo}/>
   }
@@ -131,6 +145,8 @@ const App = () => {
         onLogout={handleLogout}
         onSaveProfile={handleUpdateUser}
         isSaving = {saving}
+        onDeleteAccount={handleDeleteUser}
+        isDeleting={deleting}
       />
     )
   }
