@@ -99,8 +99,13 @@ const App = () => {
     try{
       const accessToken = sessionStorage.getItem('access_token') ?? '';
       setDeleting(true)
-      const res = deleteUser(accessToken)
+      const res = await deleteUser(accessToken)
       console.log(res)
+      sessionStorage.removeItem('access_token');
+      setAuthState({ status: 'anonymous' })
+      setPublicView('login')
+      setAuthenticatedView('board');
+      
     }catch(error){
       console.error(error)
     }finally{
