@@ -8,13 +8,14 @@ from db.base import Base
 import db.orm_models
 # Base.metadata.create_all(bind=engine)
 from fastapi.middleware.cors import CORSMiddleware
+import os
 
 app = FastAPI()
 router = APIRouter()
 
-origins=[
-    "http://localhost:5173"
-]
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")
+
+origins = [origin.strip for origin in allowed_origins_env.split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,

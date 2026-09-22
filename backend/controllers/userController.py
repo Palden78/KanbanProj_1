@@ -12,10 +12,10 @@ Userrouter = APIRouter(
 )
 
 
-@Userrouter.get("/", status_code=200)
-def getUsers(db:Session = Depends(get_db)):
-    res = getAllUsers(db)
-    return res
+# @Userrouter.get("/", status_code=200)
+# def getUsers(db:Session = Depends(get_db)):
+#     res = getAllUsers(db)
+#     return res
 
 @Userrouter.get("/me", response_model=UserResponse)
 def get_me(current_user: UserResponse = Depends(get_current_user), db:Session = Depends(get_db)):
@@ -32,12 +32,12 @@ def createNewUserRoute(newUser:UserCreate, db:Session = Depends(get_db)):
     res = createNewUser(newUser, db)
     return res
 
-@Userrouter.get("/{user_id}", status_code=200)
-def getUserByID(user_id:str, db:Session = Depends(get_db)):
-    user = getUserBYID(user_id, db)
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
+# @Userrouter.get("/{user_id}", status_code=200)
+# def getUserByID(user_id:str, db:Session = Depends(get_db)):
+#     user = getUserBYID(user_id, db)
+#     if user is None:
+#         raise HTTPException(status_code=404, detail="User not found")
+#     return user
 
 @Userrouter.delete("/me", status_code=204)
 def deleteSelfAccount(current_user: UserResponse= Depends(get_current_user), db:Session = Depends(get_db) ):
