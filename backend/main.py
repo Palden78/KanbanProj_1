@@ -15,7 +15,7 @@ router = APIRouter()
 
 allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")
 
-origins = [origin.strip for origin in allowed_origins_env.split(",") if origin.strip()]
+origins = [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,
