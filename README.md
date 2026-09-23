@@ -2,12 +2,14 @@
 
 A learning-focused full-stack Kanban application for organizing tasks across **To Do**, **In Progress**, and **Done**.
 
-The project now has two distinct frontend experiences:
+The project has two frontend experiences:
 
 - A **demo board** with browser-local task CRUD and `localStorage` persistence.
-- An **authenticated board** connected to FastAPI for login, session validation, and owner-scoped task CRUD.
+- An **authenticated workspace** backed by FastAPI and PostgreSQL, with registration, login, owner-scoped task CRUD, profile editing, and account deletion.
 
-The authenticated frontend now loads, creates, edits, moves, and deletes tasks through the existing protected API routes. The next integration work is focused on stronger error feedback, consistent task-field mapping, and automated coverage.
+The repository can be run with local Node.js, Python, and PostgreSQL processes or as a Docker Compose development stack.
+
+_Last updated: September 23, 2026._
 
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
@@ -15,25 +17,28 @@ The authenticated frontend now loads, creates, edits, moves, and deletes tasks t
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.141-009688?logo=fastapi&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker_Compose-development-2496ED?logo=docker&logoColor=white)
 
 ## Project Status
 
 | Area | Current status |
 | --- | --- |
 | Demo board | Functional local CRUD, movement, drag and drop, and `localStorage` persistence |
-| Authentication UI | Login, visible invalid-credential feedback, session restoration, and logout implemented |
-| Authenticated task reads | `GET /tasks/` integrated and rendered by status |
-| Authenticated task creation | `POST /tasks/` integrated; the returned server task is appended to the board |
-| Authenticated task updates | Edits, button movement, and drag and drop persist through `PATCH /tasks/{task_id}` |
-| Authenticated task deletion | `DELETE /tasks/{task_id}` integrated; successful deletion removes the task from the board |
+| Authentication UI | Registration, login feedback, session restoration, and logout implemented |
+| Account management | Authenticated profile viewing/editing and confirmed account deletion implemented |
+| Authenticated task CRUD | Load, create, edit, move, drag and drop, and delete operations persist through the API |
 | Backend task API | Protected CRUD routes implemented with owner enforcement |
+| Backend user API | Public registration plus protected `/users/me` read, update, and delete routes; unsafe public listing routes are disabled |
 | PostgreSQL persistence | Implemented with SQLAlchemy, Psycopg 3, and Alembic |
-| Backend tests | Latest verified run: 8 passed and 1 failed using in-memory SQLite |
+| Configuration | Frontend API URL and backend allowed CORS origins can be set through environment variables |
+| Containers | Backend, frontend, and PostgreSQL development services are defined in Docker Compose |
+| Backend tests | Verified September 23, 2026: 8 passed and 1 failed using in-memory SQLite |
 | Frontend tests | Not configured |
-| Frontend quality checks | Lint, type-check, and production build are not currently clean |
+| Frontend quality checks | Lint and production build are not currently clean |
 
 > [!IMPORTANT]
-> Frontend task CRUD is now API-connected. The board loads with `GET /tasks/`, creates with `POST /tasks/`, persists edits and status changes with `PATCH /tasks/{task_id}`, and deletes with `DELETE /tasks/{task_id}`. The individual `GET /tasks/{task_id}` route exists in the backend but is not needed by the current collection-based board UI.
+> The Docker setup is development-oriented: it uses bind mounts, starts Uvicorn with reload, and serves the frontend through Vite. Alembic migrations must still be run explicitly; the Compose stack does not apply them automatically.
 
 ## Frontend Behavior
 
@@ -50,24 +55,24 @@ The demo board works without an account or backend connection. It can:
 
 Within-column reordering is not supported, and native HTML drag and drop may be limited on touch devices.
 
-### Authenticated board
+### Authenticated workspace
 
 The authenticated application currently:
 
-1. Sends login credentials to `POST /auth/login` and displays a generic invalid-email-or-password message when login fails.
-2. Stores the returned access token in `sessionStorage` under `access_token`.
-3. Calls `GET /users/me` when restoring a browser session.
-4. Calls protected `GET /tasks/` with `Authorization: Bearer <access-token>`.
-5. Replaces board state with the authenticated user's task array and renders tasks by status.
+1. Registers new accounts through `POST /users/` after client-side username, email, password-length, and password-confirmation validation.
+2. Sends login credentials to `POST /auth/login` and displays a generic invalid-email-or-password message when login fails.
+3. Stores the returned access token in `sessionStorage` under `access_token`.
+4. Calls `GET /users/me` when restoring a browser session.
+5. Calls protected `GET /tasks/` with `Authorization: Bearer <access-token>` and renders the returned tasks by status.
 6. Creates tasks through `POST /tasks/` and appends the returned server task.
-7. Persists title, description, and status updates through `PATCH /tasks/{task_id}`.
+7. Persists title, description, and status updates through `PATCH /tasks/{task_id}` and updates the matching card in local state.
 8. Uses the same PATCH flow for movement buttons and drag-and-drop status changes.
 9. Deletes tasks through `DELETE /tasks/{task_id}` and removes them from state after success.
-10. Clears the token and returns to login on logout or a rejected task-loading token.
+10. Opens an account page that can update the current username and email through `PATCH /users/me`.
+11. Permanently deletes the current account through `DELETE /users/me` after the user types `DELETE`; owned tasks are removed through the database cascade.
+12. Clears the token and returns to login on logout, account deletion, or a rejected task-loading token.
 
-Mutation failures are currently logged to the browser console. One field-mapping issue remains after title edits: the backend update succeeds, but the card can continue showing its previous title until the task collection is loaded again.
-
-There is no frontend registration page yet. Create an account through `POST /users/` before using the login form.
+Registration, profile-update, account-deletion, task-loading, and task-mutation failures are currently logged to the browser console rather than consistently displayed in the UI. Login failures are visible, but rejected credentials and network/server failures share the same generic message.
 
 ## Backend Features
 
@@ -81,11 +86,14 @@ There is no frontend registration page yet. Create an account through `POST /use
 - JWT access-token creation and validation with PyJWT.
 - Bearer-token extraction with FastAPI `HTTPBearer`.
 - Database-backed current-user resolution.
-- Protected `/users/me` retrieval, update, and deletion.
+- Protected `/users/me` retrieval, profile update, and account deletion.
+- Public raw-user listing and lookup routes disabled.
 - Protected task create, list, retrieve, update, and delete routes.
 - Server-assigned task IDs, initial status, timestamp, and owner.
 - Owner-filtered task collections and ownership checks for individual tasks.
 - A required indexed task owner foreign key with `ON DELETE CASCADE`.
+- Comma-separated CORS origin configuration through `ALLOWED_ORIGINS`.
+- Dockerfiles and a Compose development stack for FastAPI, Vite, and PostgreSQL.
 
 The active user, authentication, and task services use SQLAlchemy. The earlier in-memory Python storage modules have been removed from the active source code.
 
@@ -102,6 +110,7 @@ The active user, authentication, and task services use SQLAlchemy. The earlier i
 | [Axios](https://axios-http.com/) | Authentication and task API requests |
 | [ESLint](https://eslint.org/) | Code-quality checks |
 | Browser storage | Demo tasks in `localStorage`; access token in `sessionStorage` |
+| Environment variables | Frontend API base URL through `VITE_API_BASE_URL` |
 
 ### Backend
 
@@ -118,6 +127,7 @@ The active user, authentication, and task services use SQLAlchemy. The earlier i
 | PostgreSQL | Durable relational database |
 | [Alembic](https://alembic.sqlalchemy.org/) | Schema migration management |
 | pytest and SQLite | Current backend test harness |
+| Docker Compose | Local development orchestration for frontend, API, and database |
 
 ## Project Structure
 
@@ -126,21 +136,26 @@ KanbanProj_1/
 ├── frontend/
 │   ├── src/
 │   │   ├── api/
-│   │   │   ├── auth.ts                # Login and current-user requests
-│   │   │   ├── client.ts              # Shared Axios client
-│   │   │   └── tasks.ts               # Authenticated task requests
+│   │   │   ├── auth.ts                # Registration, login, and current-user requests
+│   │   │   ├── client.ts              # Shared Axios client and configurable base URL
+│   │   │   ├── tasks.ts               # Authenticated task requests
+│   │   │   └── user.ts                # Profile update and account deletion requests
 │   │   ├── components/
+│   │   │   ├── AccountPage.tsx        # Profile editing and account deletion UI
 │   │   │   ├── AuthBoard.tsx          # Authenticated task columns and cards
 │   │   │   ├── AuthenticatedBoard.tsx # Task loading and API-backed mutations
 │   │   │   ├── DemoBoard.tsx          # Local demo state and persistence
 │   │   │   ├── InputForm.tsx          # Task creation form
 │   │   │   ├── LoginForm.tsx          # Login form fields
-│   │   │   ├── LoginPage.tsx          # Login and demo entry view
+│   │   │   ├── LoginPage.tsx          # Login, registration, and demo entry view
+│   │   │   ├── RegistrationPage.tsx   # Account creation form
 │   │   │   └── board.tsx              # Demo task columns and cards
-│   │   ├── App.tsx                    # Authentication bootstrap and view selection
+│   │   ├── App.tsx                    # Authentication, public, board, and account views
 │   │   ├── main.tsx                   # React application entry point
 │   │   ├── index.css                  # Tailwind CSS entry point
 │   │   └── types.ts                   # Frontend request and task types
+│   ├── Dockerfile                     # Vite development image
+│   ├── .dockerignore
 │   ├── package.json
 │   └── vite.config.ts
 ├── backend/
@@ -171,10 +186,14 @@ KanbanProj_1/
 │   ├── alembic/
 │   │   ├── versions/                  # Versioned schema migrations
 │   │   └── env.py                     # Alembic environment configuration
+│   ├── Dockerfile                     # FastAPI image
+│   ├── .dockerignore
 │   ├── requirements.in                # Direct runtime dependencies
 │   ├── requirements.txt               # Pinned runtime dependencies
 │   └── main.py                        # FastAPI application entry point
 ├── scripts/
+├── docker-compose.yml                 # Development web, API, and PostgreSQL stack
+├── .env.compose                       # Local Compose values; ignored by Git
 ├── .gitignore
 └── README.md
 ```
@@ -187,8 +206,8 @@ KanbanProj_1/
 - [Node.js](https://nodejs.org/) 22.13 or newer
 - npm
 - Python with virtual-environment support; current development uses Python 3.14
-- A running PostgreSQL server for authenticated mode
-- A PostgreSQL database and role with permission to apply the project migration
+- For the manual setup: a running PostgreSQL server plus a database and role with permission to apply migrations
+- For the containerized setup: Docker with the Compose plugin
 - Optional: [Postman](https://www.postman.com/) or another API client
 
 ### Clone the repository
@@ -210,7 +229,57 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173) and choose the demo-board option from the login page.
 
-## Run the Authenticated Application
+## Run with Docker Compose
+
+The Compose stack starts PostgreSQL 17, the FastAPI API, and the Vite frontend for local development.
+
+### 1. Create the Compose environment file
+
+Create `.env.compose` in the repository root:
+
+```dotenv
+POSTGRES_DB=kanban
+POSTGRES_USER=kanban
+POSTGRES_PASSWORD=<local-database-password>
+JWT_SECRET=<strong-random-development-secret>
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+ALLOWED_ORIGINS=http://localhost:5173
+```
+
+Both `.env.compose` and `.env` are ignored by Git. Do not commit secrets or database credentials.
+
+### 2. Build and start the services
+
+```bash
+docker compose --env-file .env.compose up --build
+```
+
+The development services are exposed only on the local machine:
+
+- Frontend: [http://localhost:5173](http://localhost:5173)
+- API: [http://localhost:8000](http://localhost:8000)
+- Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+The database uses the named `postgres_data` volume, while `frontend_node_modules` keeps container-installed frontend dependencies separate from the host bind mount.
+
+### 3. Apply migrations
+
+The current Compose command does not run Alembic automatically. With the services running, apply the schema in a second terminal:
+
+```bash
+docker compose --env-file .env.compose exec api alembic upgrade head
+```
+
+Stop the stack with `Ctrl+C`, or run this from another terminal:
+
+```bash
+docker compose --env-file .env.compose down
+```
+
+Use `docker compose --env-file .env.compose down -v` only when you intentionally want to delete the local PostgreSQL data volume.
+
+## Run the Authenticated Application Manually
 
 Authenticated mode requires PostgreSQL, FastAPI, and the React frontend.
 
@@ -223,11 +292,12 @@ JWT_SECRET=<strong-random-development-secret>
 JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 DATABASE_URL=postgresql+psycopg://<user>:<password>@localhost:5432/<database>
+ALLOWED_ORIGINS=http://localhost:5173
 ```
 
 The real `.env` file is ignored by Git. Never commit JWT secrets or database credentials.
 
-`JWT_ALGORITHM` and `ACCESS_TOKEN_EXPIRE_MINUTES` are configuration values. HS256 and 30 minutes above are example local settings, not hard-coded token behavior.
+`JWT_ALGORITHM` and `ACCESS_TOKEN_EXPIRE_MINUTES` are configuration values. HS256 and 30 minutes above are example local settings, not hard-coded token behavior. `ALLOWED_ORIGINS` accepts a comma-separated list and defaults to `http://localhost:5173` when omitted.
 
 ### 2. Install and migrate the backend
 
@@ -271,23 +341,17 @@ npm ci
 npm run dev
 ```
 
-Use [http://localhost:5173](http://localhost:5173). The backend currently allows that exact CORS origin only; `http://127.0.0.1:5173` or a different Vite port will not match it.
+Use [http://localhost:5173](http://localhost:5173). The backend allows the comma-separated origins in `ALLOWED_ORIGINS`; if the variable is omitted, only `http://localhost:5173` is accepted by default.
 
-The Axios client currently targets `http://localhost:8000` with a five-second timeout. `VITE_API_BASE_URL` is referenced in the client but is not yet applied as the `baseURL`, so the API address is not currently environment-configurable.
+The Axios client uses `VITE_API_BASE_URL` when it is defined and otherwise falls back to `http://localhost:8000`. To target another API when starting Vite manually, create `frontend/.env.local`, for example:
+
+```dotenv
+VITE_API_BASE_URL=http://localhost:8000
+```
 
 ### 5. Create an account and log in
 
-There is no registration form in the frontend yet. Create an account with `POST /users/`, for example through Swagger UI:
-
-```json
-{
-  "username": "example-user",
-  "email": "user@example.com",
-  "password": "at-least-eight-characters"
-}
-```
-
-Then use that email and password on the frontend login page.
+Choose **Create an account** on the login page, enter a username, email, and password of at least eight characters, and then sign in with the registered email and password. Registration calls `POST /users/`; the API remains available through Swagger UI for manual testing.
 
 ## Frontend Scripts
 
@@ -300,7 +364,12 @@ Run these commands from `frontend/`:
 | `npm run lint` | Run ESLint across the frontend |
 | `npm run preview` | Preview an existing production build |
 
-At the current development snapshot, lint and build do not pass cleanly. The remaining reported issues are unused imports, variables, and expressions; the authenticated task CRUD integration itself is no longer blocked by the earlier create-task state mapping.
+As verified on September 23, 2026, these checks do not yet pass cleanly:
+
+- `npm run lint` reports one `react-hooks/set-state-in-effect` error in `AccountPage.tsx`.
+- `npm run build` stops during TypeScript compilation because `DemoBoard.tsx` contains an unused `React` import.
+
+No frontend automated test command is configured.
 
 ## Current API
 
@@ -403,14 +472,9 @@ User and task creation timestamps are database-generated. The current database c
 | `POST` | `/users/` | Public | `201 Created` | Create an account |
 | `GET` | `/users/me` | Bearer | `200 OK` | Retrieve the current user |
 | `PATCH` | `/users/me` | Bearer | `200 OK` | Update the current user's profile |
-| `DELETE` | `/users/me` | Bearer | `204 No Content` | Delete the current user |
-| `GET` | `/users/` | Public legacy route | `200 OK` | Return raw user ORM records |
-| `GET` | `/users/{user_id}` | Public legacy route | `200 OK` | Return one raw user ORM record |
+| `DELETE` | `/users/me` | Bearer | `204 No Content` | Delete the current user and their tasks |
 
-> [!WARNING]
-> `GET /users/` and `GET /users/{user_id}` are currently public and return raw ORM users, including `password_hash`. These routes are an active security limitation and should be protected or removed and given safe response models before deployment.
-
-The ID-based user PATCH and DELETE handlers are commented out. Prefer the bearer-protected `/users/me` routes for current-user operations.
+The former public `GET /users/` and `GET /users/{user_id}` handlers are disabled, so raw user records and password hashes are no longer exposed through those routes. The old ID-based PATCH and DELETE handlers also remain disabled; account management uses the bearer-protected `/users/me` routes.
 
 ## Data Flows
 
@@ -459,6 +523,28 @@ FastAPI → SQLAlchemy → PostgreSQL
 Remove the task from React state after success
 ```
 
+### Account paths
+
+```text
+Register
+    ↓ POST /users/
+FastAPI → SQLAlchemy → PostgreSQL
+    ↓
+Return to the login view
+
+Edit profile
+    ↓ PATCH /users/me with bearer token
+FastAPI → SQLAlchemy → PostgreSQL
+    ↓
+Replace the authenticated user in React state
+
+Delete account after typing DELETE
+    ↓ DELETE /users/me with bearer token
+FastAPI → SQLAlchemy → PostgreSQL
+    ↓ database cascade removes owned tasks
+Clear session token and return to login
+```
+
 ## Ownership and Persistence
 
 The database schema enforces a many-tasks-to-one-user association through `task.user_id`:
@@ -491,11 +577,12 @@ The current test harness:
 - Uses `Base.metadata.create_all()` for test setup rather than Alembic.
 - Does not exercise PostgreSQL or migration upgrades/downgrades.
 
-The latest verified backend run completed with **8 passed and 1 failed**. Do not treat the suite as fully green or complete:
+The latest verified backend run on September 23, 2026 completed with **8 passed and 1 failed**. Do not treat the suite as fully green or complete:
 
 - `pytest` is not included in the backend dependency manifests.
-- The failing cascade test omits the required task `description`, receives a validation response, and fails before its intended cascade assertion.
+- The cascade test now creates its task successfully and deletes the user, but its final SQLite query compares the UUID column with the response's string ID and raises `AttributeError: 'str' object has no attribute 'hex'` before completing the cascade assertion.
 - Repeated ownership-test function names mean Python collects only the final same-named case; cross-user PATCH and DELETE tests are currently absent.
+- The run also reports one Starlette/httpx deprecation warning and one Pydantic field-argument deprecation warning.
 - No frontend test runner or frontend tests are configured.
 
 If pytest is installed in the active backend environment, run the backend suite from `backend/` with:
@@ -529,43 +616,45 @@ python -m pytest
 - [x] Persist authenticated deletion through `DELETE /tasks/{task_id}`.
 - [x] Display a visible message when login fails.
 - [x] Add initial backend pytest sources.
+- [x] Fix immediate title rendering after authenticated task edits.
+- [x] Add frontend account registration.
+- [x] Add authenticated profile viewing and editing.
+- [x] Add confirmed account deletion and return to the login view.
+- [x] Disable public raw-user listing and lookup routes.
+- [x] Read the frontend API URL from `VITE_API_BASE_URL`.
+- [x] Make allowed CORS origins configurable through `ALLOWED_ORIGINS`.
+- [x] Add backend and frontend Dockerfiles plus a Compose development stack.
 
 ### Next steps
 
-- [ ] Fix immediate title rendering after authenticated task edits.
 - [ ] Standardize task response models and frontend/backend field naming.
-- [ ] Protect or remove the public legacy user routes and prevent password-hash exposure.
 - [ ] Tighten task and user update validation and error handling.
+- [ ] Add visible registration, profile-update, account-deletion, task-loading, and task-mutation feedback.
+- [ ] Distinguish invalid credentials from network and server failures in the login UI.
 - [ ] Repair and expand backend authentication, ownership, update, delete, and cascade tests.
 - [ ] Add automated PostgreSQL and Alembic migration tests.
 - [ ] Add frontend unit, component, API-integration, and end-to-end tests.
 - [ ] Restore clean frontend lint, type-check, and production-build results.
-- [ ] Read the frontend API URL from `VITE_API_BASE_URL`.
-- [ ] Make allowed CORS origins configurable.
-- [ ] Add loading states and visible task-loading and mutation error feedback.
-- [ ] Distinguish invalid credentials from network and server failures in the login UI.
-- [ ] Add a frontend registration flow.
-- [ ] Add containerization for reproducible local and deployment environments.
+- [ ] Add an automatic or clearly enforced migration step to the container workflow.
+- [ ] Add production-oriented container builds and serving configuration.
 - [ ] Add continuous-integration configuration.
 - [ ] Add deployment configuration.
 
 ## Current Limitations
 
-- Authenticated title edits persist to the backend, but the card can retain its previous title until tasks are reloaded because the update and rendered task fields use different casing.
-- Task loading and mutation failures are logged to the console rather than shown in the board UI.
+- Registration, profile-update, account-deletion, task-loading, and task-mutation failures are logged to the console rather than consistently shown in the UI.
 - Login failures are visible, but network and server errors currently use the same “Invalid email or password” message as rejected credentials.
-- The frontend API base URL is hardcoded.
-- Backend CORS accepts only the local Vite origin `http://localhost:5173`.
-- There is no frontend account-registration or profile-management UI.
+- Profile updates and account deletion do not currently display success or failure notifications.
 - Some startup failures can leave the frontend on its checking state.
-- Task routes do not enforce explicit response models and currently return snake_case ORM fields.
-- Public legacy user routes expose password hashes.
+- Task routes do not enforce explicit response models and currently return snake_case ORM fields while request models use camelCase.
 - Backend tests use SQLite rather than PostgreSQL and require repair and broader coverage.
-- Frontend automated tests are absent, and current lint/type-check/build checks are not clean.
-- Refresh tokens, server-side logout, and token revocation are not implemented.
+- Frontend automated tests are absent; lint fails in `AccountPage.tsx`, and the production build fails on an unused import in `DemoBoard.tsx`.
+- The Compose stack is for development only, runs Uvicorn and Vite development servers, and requires a separate Alembic migration command.
+- The PostgreSQL port is not published to the host by Compose; database access is internal to the stack unless the configuration is changed.
+- Refresh tokens, server-side logout, token revocation, and password update/reset are not implemented.
 - Collaborative boards, search, filters, priorities, labels, and due dates are not implemented.
 - Drag and drop does not reliably support touch or within-column reordering.
-- Containerization, continuous integration, and deployment are not configured.
+- Continuous integration and deployment are not configured.
 
 ## Contributing
 
