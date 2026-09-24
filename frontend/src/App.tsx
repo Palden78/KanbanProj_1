@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import axios from 'axios'
-const intentionalCiFailure = true
 import { createNewUser, getCurrUser } from './api/auth'
 import AccountPage from './components/AccountPage'
 import AuthenticatedBoard from './components/AuthenticatedBoard'
