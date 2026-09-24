@@ -9,7 +9,7 @@ The project has two frontend experiences:
 
 The repository can be run with local Node.js, Python, and PostgreSQL processes or as a Docker Compose development stack.
 
-_Last updated: September 23, 2026._
+_Last updated: September 24, 2026._
 
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
@@ -33,9 +33,10 @@ _Last updated: September 23, 2026._
 | PostgreSQL persistence | Implemented with SQLAlchemy, Psycopg 3, and Alembic |
 | Configuration | Frontend API URL and backend allowed CORS origins can be set through environment variables |
 | Containers | Backend, frontend, and PostgreSQL development services are defined in Docker Compose |
-| Backend tests | Verified September 23, 2026: 8 passed and 1 failed using in-memory SQLite |
+| Continuous integration | GitHub Actions runs frontend lint/build and backend tests on pull requests and pushes to `main` |
+| Backend tests | Verified September 24, 2026: 9 passed using in-memory SQLite |
 | Frontend tests | Not configured |
-| Frontend quality checks | Lint and production build are not currently clean |
+| Frontend quality checks | ESLint and the TypeScript/Vite production build pass |
 
 > [!IMPORTANT]
 > The Docker setup is development-oriented: it uses bind mounts, starts Uvicorn with reload, and serves the frontend through Vite. Alembic migrations must still be run explicitly; the Compose stack does not apply them automatically.
@@ -191,6 +192,9 @@ KanbanProj_1/
 │   ├── requirements.in                # Direct runtime dependencies
 │   ├── requirements.txt               # Pinned runtime dependencies
 │   └── main.py                        # FastAPI application entry point
+├── .github/
+│   └── workflows/
+│       └── ci.yml                     # Frontend and backend CI jobs
 ├── scripts/
 ├── docker-compose.yml                 # Development web, API, and PostgreSQL stack
 ├── .env.compose                       # Local Compose values; ignored by Git
@@ -364,12 +368,18 @@ Run these commands from `frontend/`:
 | `npm run lint` | Run ESLint across the frontend |
 | `npm run preview` | Preview an existing production build |
 
-As verified on September 23, 2026, these checks do not yet pass cleanly:
+As verified on September 24, 2026, both `npm run lint` and `npm run build` pass. No frontend automated test command is configured yet.
 
-- `npm run lint` reports one `react-hooks/set-state-in-effect` error in `AccountPage.tsx`.
-- `npm run build` stops during TypeScript compilation because `DemoBoard.tsx` contains an unused `React` import.
+## Continuous Integration
 
-No frontend automated test command is configured.
+The GitHub Actions workflow in `.github/workflows/ci.yml` runs on pull requests, pushes to `main`, and manual dispatches. It uses two parallel jobs:
+
+- **Frontend checks** install dependencies with `npm ci`, run ESLint, and create the TypeScript/Vite production build.
+- **Backend tests** install the pinned backend dependencies plus pytest and run the SQLite-backed pytest suite with isolated CI configuration.
+
+The current green CI baseline is **9 passing backend tests**, clean frontend lint, and a successful frontend production build. PostgreSQL service-container tests, Alembic migration checks, frontend automated tests, image publishing, and deployment automation are not part of the workflow yet.
+
+Because this is a private repository on GitHub Free, passing checks currently follow a manual pull-request policy rather than an enforced branch-protection rule: changes should not be merged unless both jobs pass.
 
 ## Current API
 
@@ -577,12 +587,11 @@ The current test harness:
 - Uses `Base.metadata.create_all()` for test setup rather than Alembic.
 - Does not exercise PostgreSQL or migration upgrades/downgrades.
 
-The latest verified backend run on September 23, 2026 completed with **8 passed and 1 failed**. Do not treat the suite as fully green or complete:
+The latest verified backend run on September 24, 2026 completed with **9 passed**. The cascade test now converts the API's string task ID to a UUID before querying the SQLAlchemy UUID column. The suite is green, but its coverage and dependency setup still need improvement:
 
-- `pytest` is not included in the backend dependency manifests.
-- The cascade test now creates its task successfully and deletes the user, but its final SQLite query compares the UUID column with the response's string ID and raises `AttributeError: 'str' object has no attribute 'hex'` before completing the cascade assertion.
+- `pytest` is installed explicitly by CI but is not yet declared in a backend development dependency manifest.
 - Repeated ownership-test function names mean Python collects only the final same-named case; cross-user PATCH and DELETE tests are currently absent.
-- The run also reports one Starlette/httpx deprecation warning and one Pydantic field-argument deprecation warning.
+- The run reports one Starlette/httpx deprecation warning and one Pydantic field-argument deprecation warning.
 - No frontend test runner or frontend tests are configured.
 
 If pytest is installed in the active backend environment, run the backend suite from `backend/` with:
@@ -624,6 +633,9 @@ python -m pytest
 - [x] Read the frontend API URL from `VITE_API_BASE_URL`.
 - [x] Make allowed CORS origins configurable through `ALLOWED_ORIGINS`.
 - [x] Add backend and frontend Dockerfiles plus a Compose development stack.
+- [x] Add GitHub Actions CI for frontend lint/build and backend tests.
+- [x] Restore clean frontend lint, type-check, and production-build results.
+- [x] Repair the account-deletion cascade test.
 
 ### Next steps
 
@@ -631,14 +643,13 @@ python -m pytest
 - [ ] Tighten task and user update validation and error handling.
 - [ ] Add visible registration, profile-update, account-deletion, task-loading, and task-mutation feedback.
 - [ ] Distinguish invalid credentials from network and server failures in the login UI.
-- [ ] Repair and expand backend authentication, ownership, update, delete, and cascade tests.
-- [ ] Add automated PostgreSQL and Alembic migration tests.
+- [ ] Expand backend authentication, ownership, update, delete, and cascade tests.
+- [ ] Add PostgreSQL service-container and Alembic migration checks to CI.
 - [ ] Add frontend unit, component, API-integration, and end-to-end tests.
-- [ ] Restore clean frontend lint, type-check, and production-build results.
 - [ ] Add an automatic or clearly enforced migration step to the container workflow.
 - [ ] Add production-oriented container builds and serving configuration.
-- [ ] Add continuous-integration configuration.
-- [ ] Add deployment configuration.
+- [ ] Publish versioned container images after successful CI checks.
+- [ ] Add staging and production deployment workflows.
 
 ## Current Limitations
 
@@ -647,14 +658,14 @@ python -m pytest
 - Profile updates and account deletion do not currently display success or failure notifications.
 - Some startup failures can leave the frontend on its checking state.
 - Task routes do not enforce explicit response models and currently return snake_case ORM fields while request models use camelCase.
-- Backend tests use SQLite rather than PostgreSQL and require repair and broader coverage.
-- Frontend automated tests are absent; lint fails in `AccountPage.tsx`, and the production build fails on an unused import in `DemoBoard.tsx`.
+- Backend tests use SQLite rather than PostgreSQL and still need broader coverage; PostgreSQL and Alembic are not exercised by CI.
+- Frontend automated tests are absent even though lint and the production build now pass.
 - The Compose stack is for development only, runs Uvicorn and Vite development servers, and requires a separate Alembic migration command.
 - The PostgreSQL port is not published to the host by Compose; database access is internal to the stack unless the configuration is changed.
 - Refresh tokens, server-side logout, token revocation, and password update/reset are not implemented.
 - Collaborative boards, search, filters, priorities, labels, and due dates are not implemented.
 - Drag and drop does not reliably support touch or within-column reordering.
-- Continuous integration and deployment are not configured.
+- CI does not yet validate PostgreSQL migrations or publish deployable artifacts, and continuous deployment is not configured.
 
 ## Contributing
 
