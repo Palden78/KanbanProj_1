@@ -145,6 +145,7 @@ const App = () => {
   if (authenticatedView === 'account') {
     return (
       <AccountPage
+        key={`${authState.user.id}:${authState.user.username}:${authState.user.email}`}
         user={authState.user}
         onBackToBoard={() => setAuthenticatedView('board')}
         onLogout={handleLogout}

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import React from 'react'
 import { type SavedTask, type TaskDraft, type TaskUpdate, type TaskStatus } from '../types';
 import InputForm from './InputForm';
 import Board from './board';
