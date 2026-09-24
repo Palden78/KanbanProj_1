@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type FormEvent, useEffect } from 'react'
+import { useState, type ChangeEvent, type FormEvent } from 'react'
 import type { ProfileFormValues, PublicUser } from '../types'
 
 type AccountPageProps = {
@@ -49,15 +49,7 @@ const AccountPage = ({
     : new Intl.DateTimeFormat(undefined, {
         dateStyle: 'long',
       }).format(joinedDate)
-    
-  useEffect(() => {
-  if (user) {
-    setProfile({
-      username: user.username,
-      email: user.email,
-    });
-  }
-}, [user]);
+
   const initials =
     user.username
       .trim()
