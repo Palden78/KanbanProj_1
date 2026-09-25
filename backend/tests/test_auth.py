@@ -3,8 +3,9 @@
 Registration, login, JWT tests
 """
 
-import time
+import pytest
 
+@pytest.mark.postgresql
 def test_user_registration(client):
     res = client.post("/users/", json={"username": "palden", "email": "palden@example.com", "password": "password123"})
     assert res.status_code == 201
@@ -19,6 +20,7 @@ def test_duplicate_email_rejection(client):
     assert res.status_code == 409
     assert res.json()["detail"] == "A user with this email address already exists"
 
+@pytest.mark.postgresql
 def test_login_success(client):
     client.post("/users/", json={"username": "palden", "email": "palden@example.com", "password": "password123"})
     res = client.post("/auth/login", json={"email": "palden@example.com", "password": "password123"})
