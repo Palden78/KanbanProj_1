@@ -6,7 +6,12 @@ User deletion and task cascading tests
 
 import uuid
 
+import pytest
+
 from db.orm_models import Task
+
+
+pytestmark = pytest.mark.postgresql
 
 def test_user_deletion_cascades_tasks(client, user_a_headers, db_session):
     # Create task for User A
