@@ -127,7 +127,7 @@ The active user, authentication, and task services use SQLAlchemy. The earlier i
 | [Psycopg 3](https://www.psycopg.org/psycopg3/) | PostgreSQL driver |
 | PostgreSQL | Durable relational database |
 | [Alembic](https://alembic.sqlalchemy.org/) | Schema migration management |
-| pytest and SQLite | Current backend test harness |
+| pytest, SQLite, and PostgreSQL | Full suite against in-memory SQLite, plus a selected PostgreSQL integration and migration test lane |
 | Docker Compose | Local development orchestration for frontend, API, and database |
 
 ## Project Structure
@@ -191,6 +191,7 @@ KanbanProj_1/
 │   ├── .dockerignore
 │   ├── requirements.in                # Direct runtime dependencies
 │   ├── requirements.txt               # Pinned runtime dependencies
+│   ├── pytest.ini                     # PostgreSQL marker and strict marker checks
 │   └── main.py                        # FastAPI application entry point
 ├── .github/
 │   └── workflows/
