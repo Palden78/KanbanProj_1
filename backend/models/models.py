@@ -24,6 +24,14 @@ class TaskUpdate(BaseModel):
     status: Optional[TaskStatus] = None
 
 
+class TaskResponse(BaseModel):
+    id: uuid.UUID
+    task_name: str
+    description: str | None
+    status: TaskStatus
+    created_at: datetime
+    user_id: uuid.UUID
 
+    model_config = ConfigDict(from_attributes=True)
 
 

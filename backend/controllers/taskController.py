@@ -7,6 +7,7 @@ from core.security import get_current_user
 from models.userModels import UserResponse
 from sqlalchemy.orm import Session
 from core.database import get_db
+from models.models import TaskResponse
 
 Taskrouter = APIRouter(
     prefix= "/tasks",
@@ -18,12 +19,12 @@ spoof_exception = HTTPException(
         detail= "You do not have permission to alter this resource"
 )
 
-@Taskrouter.get("/", status_code=200)
+@Taskrouter.get("/", status_code=200, response_model=list[TaskResponse])
 def get_tasks(current_user: UserResponse = Depends(get_current_user), db:Session = Depends(get_db)):
     tasks = getAllTasks(current_user, db )
     return tasks
 
-@Taskrouter.get("/{task_id}",status_code=200)
+@Taskrouter.get("/{task_id}",status_code=200,response_model=list[TaskResponse])
 def getByID(task_id:str, current_user: UserResponse = Depends(get_current_user), db:Session = Depends(get_db)):
     res = getTaskById(task_id, current_user, db)
 
@@ -34,12 +35,12 @@ def getByID(task_id:str, current_user: UserResponse = Depends(get_current_user),
 
     return res 
 
-@Taskrouter.post("/", status_code = 201)
+@Taskrouter.post("/", status_code = 201,response_model=list[TaskResponse])
 def createTask(task:td, current_user: UserResponse = Depends(get_current_user), db:Session = Depends(get_db)):
     res = createNewTask(task, current_user, db)
     return res
 
-@Taskrouter.patch("/{task_id}", status_code=200)
+@Taskrouter.patch("/{task_id}", status_code=200,response_model=list[TaskResponse])
 def updateByID(task_id:str, task_update:T_update, current_user: UserResponse = Depends(get_current_user), db:Session = Depends(get_db)):
     res = updateTask(task_id, task_update, current_user, db)
 
