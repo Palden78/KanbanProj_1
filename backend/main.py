@@ -9,8 +9,20 @@ import db.orm_models
 # Base.metadata.create_all(bind=engine)
 from fastapi.middleware.cors import CORSMiddleware
 import os
+from contextlib import asynccontextmanager
+from core.cache import create_cache
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.cache = create_cache()
+
+    try:
+        yield
+    finally:
+        app.state.cache.connection_pool.disconnect()
+
+
+app = FastAPI(lifespan=lifespan)
 router = APIRouter()
 
 allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")
