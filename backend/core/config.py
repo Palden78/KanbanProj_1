@@ -15,3 +15,17 @@ DB_URL = os.getenv("DATABASE_URL")
 REDIS_URL = os.getenv(
     "REDIS_URL"
 )
+
+CACHE_KEY_PREFIX = os.getenv(
+    "CACHE_KEY_PREFIX"
+)
+
+CACHE_USER_TTL_SECONDS = os.getenv(
+    "CACHE_USER_TTL_SECONDS"
+)
+CACHE_TASK_LIST_TTL_SECONDS = os.getenv(
+    "CACHE_TASK_LIST_TTL_SECONDS"
+)
+CACHE_TASK_TTL_SECONDS = os.getenv(
+    "CACHE_TASK_TTL_SECONDS"
+)

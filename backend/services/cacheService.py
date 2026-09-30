@@ -13,6 +13,19 @@ def get_cached_value(cache: Redis, key: str) -> str | None:
         logger.warning("Redis read failed for key %s", key, exc_info=True)
         return None
 
+def set_cached_value(
+        cache: Redis,
+        key:str,
+        value:str,
+        ttl_seconds:int,
+)-> None:
+    try:
+        cache.set(
+            key, value, ex=ttl_seconds
+        )
+    except RedisError:
+        logger.warning("Redis write failed for key %s", key, exc_info=True)
+
 def delete_cached_values(cache: Redis, *keys: str) -> None:
     try:
         if keys:
