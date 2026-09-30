@@ -1,6 +1,8 @@
+from fastapi import Request
 from redis import Redis
 
 from core.config import REDIS_URL
+
 
 def create_cache() -> Redis:
     return Redis.from_url(
@@ -10,3 +12,7 @@ def create_cache() -> Redis:
         socket_timeout=0.5,
         health_check_interval=30,
     )
+
+
+def get_cache(request: Request) -> Redis:
+    return request.app.state.cache

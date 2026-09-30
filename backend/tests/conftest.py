@@ -4,6 +4,7 @@ Database session and test client fixtures
 
 import os
 
+import fakeredis
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event, text
@@ -14,6 +15,7 @@ from sqlalchemy.pool import StaticPool
 from main import app
 from db.base import Base
 from core.config import DB_URL
+from core.cache import get_cache
 from core.database import get_db
 
 
@@ -71,16 +73,27 @@ def db_session():
 
 
 @pytest.fixture()
-def client(db_session):
+def fake_cache():
+    cache = fakeredis.FakeRedis(decode_responses=True)
+    try:
+        yield cache
+    finally:
+        cache.close()
+
+
+@pytest.fixture()
+def client(db_session, fake_cache):
     def _override_get_db():
         yield db_session
 
     app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_cache] = lambda: fake_cache
     try:
         with TestClient(app) as test_client:
             yield test_client
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_cache, None)
 
 
 @pytest.fixture

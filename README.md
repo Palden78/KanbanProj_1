@@ -7,9 +7,9 @@ The project has two frontend experiences:
 - A **demo board** with browser-local task CRUD and `localStorage` persistence.
 - An **authenticated workspace** backed by FastAPI and PostgreSQL, with registration, login, owner-scoped task CRUD, profile editing, and account deletion.
 
-The repository can be run with local Node.js, Python, and PostgreSQL processes or as a Docker Compose development stack.
+The repository can be run with local Node.js, Python, PostgreSQL, and Redis processes or as a Docker Compose development stack.
 
-_Last updated: September 25, 2026._
+_Last updated: September 30, 2026._
 
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
@@ -28,11 +28,12 @@ _Last updated: September 25, 2026._
 | Authentication UI | Registration, login feedback, session restoration, and logout implemented |
 | Account management | Authenticated profile viewing/editing and confirmed account deletion implemented |
 | Authenticated task CRUD | Load, create, edit, move, drag and drop, and delete operations persist through the API |
-| Backend task API | Protected CRUD routes implemented with owner enforcement |
+| Backend task API | Protected CRUD routes implemented with owner enforcement and explicit response models |
 | Backend user API | Public registration plus protected `/users/me` read, update, and delete routes; unsafe public listing routes are disabled |
 | PostgreSQL persistence | Implemented with SQLAlchemy, Psycopg 3, and Alembic |
-| Configuration | Frontend API URL and backend allowed CORS origins can be set through environment variables |
-| Containers | Backend, frontend, and PostgreSQL development services are defined in Docker Compose |
+| Redis caching | Owner-scoped task lists use a short-lived, generation-versioned, fail-open cache |
+| Configuration | Frontend API URL, backend allowed CORS origins, and task-list cache settings can be set through environment variables |
+| Containers | Backend, frontend, PostgreSQL, and Redis development services are defined in Docker Compose |
 | Continuous integration | GitHub Actions runs frontend checks, the full SQLite suite, and PostgreSQL migration/integration checks |
 | Backend tests | Verified September 25, 2026: 9 SQLite tests and 6 selected PostgreSQL tests passed |
 | Frontend tests | Not configured |
@@ -92,9 +93,11 @@ Registration, profile-update, account-deletion, task-loading, and task-mutation 
 - Protected task create, list, retrieve, update, and delete routes.
 - Server-assigned task IDs, initial status, timestamp, and owner.
 - Owner-filtered task collections and ownership checks for individual tasks.
+- Explicit task response models that preserve the current snake_case API contract.
+- Short-lived Redis caching for owner-scoped task lists, with generation-based mutation invalidation and PostgreSQL fallback.
 - A required indexed task owner foreign key with `ON DELETE CASCADE`.
 - Comma-separated CORS origin configuration through `ALLOWED_ORIGINS`.
-- Dockerfiles and a Compose development stack for FastAPI, Vite, and PostgreSQL.
+- Dockerfiles and a Compose development stack for FastAPI, Vite, PostgreSQL, and Redis.
 
 The active user, authentication, and task services use SQLAlchemy. The earlier in-memory Python storage modules have been removed from the active source code.
 
@@ -126,9 +129,10 @@ The active user, authentication, and task services use SQLAlchemy. The earlier i
 | [SQLAlchemy](https://www.sqlalchemy.org/) | ORM, engine, and database sessions |
 | [Psycopg 3](https://www.psycopg.org/psycopg3/) | PostgreSQL driver |
 | PostgreSQL | Durable relational database |
+| [Redis](https://redis.io/) | Ephemeral owner-scoped task-list cache |
 | [Alembic](https://alembic.sqlalchemy.org/) | Schema migration management |
 | pytest, SQLite, and PostgreSQL | Full suite against in-memory SQLite, plus a selected PostgreSQL integration and migration test lane |
-| Docker Compose | Local development orchestration for frontend, API, and database |
+| Docker Compose | Local development orchestration for frontend, API, database, and cache |
 
 ## Project Structure
 
@@ -165,7 +169,8 @@ KanbanProj_1/
 │   │   ├── taskController.py          # Protected task routes
 │   │   └── userController.py          # Registration and user routes
 │   ├── core/
-│   │   ├── config.py                  # JWT and database configuration
+│   │   ├── cache.py                   # Redis client lifecycle dependency
+│   │   ├── config.py                  # JWT, database, and cache configuration
 │   │   ├── database.py                # Engine, session factory, and `get_db`
 │   │   └── security.py                # Password, token, and current-user helpers
 │   ├── db/
@@ -177,7 +182,8 @@ KanbanProj_1/
 │   │   └── userModels.py              # User request/response models
 │   ├── services/
 │   │   ├── authService.py             # Credential verification and JWT issuance
-│   │   ├── taskService.py             # Owner-scoped SQLAlchemy task operations
+│   │   ├── cacheService.py            # Redis keys, generations, and fail-open helpers
+│   │   ├── taskService.py             # Owner-scoped SQLAlchemy and cached task operations
 │   │   └── userService.py             # SQLAlchemy user operations
 │   ├── tests/
 │   │   ├── conftest.py                # SQLite test database and app overrides
@@ -197,7 +203,7 @@ KanbanProj_1/
 │   └── workflows/
 │       └── ci.yml                     # Frontend and backend CI jobs
 ├── scripts/
-├── docker-compose.yml                 # Development web, API, and PostgreSQL stack
+├── docker-compose.yml                 # Development web, API, PostgreSQL, and Redis stack
 ├── .env.compose                       # Local Compose values; ignored by Git
 ├── .gitignore
 └── README.md
@@ -212,6 +218,7 @@ KanbanProj_1/
 - npm
 - Python with virtual-environment support; current development uses Python 3.14
 - For the manual setup: a running PostgreSQL server plus a database and role with permission to apply migrations
+- For task-list caching in the manual setup: a local Redis server; the API continues through PostgreSQL if Redis is unavailable
 - For the containerized setup: Docker with the Compose plugin
 - Optional: [Postman](https://www.postman.com/) or another API client
 
@@ -236,7 +243,7 @@ Open [http://localhost:5173](http://localhost:5173) and choose the demo-board op
 
 ## Run with Docker Compose
 
-The Compose stack starts PostgreSQL 17, the FastAPI API, and the Vite frontend for local development.
+The Compose stack starts PostgreSQL 17, Redis 7.4, the FastAPI API, and the Vite frontend for local development.
 
 ### 1. Create the Compose environment file
 
@@ -250,6 +257,8 @@ JWT_SECRET=<strong-random-development-secret>
 JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 ALLOWED_ORIGINS=http://localhost:5173
+CACHE_KEY_PREFIX=kanban:v1
+CACHE_TASK_LIST_TTL_SECONDS=30
 ```
 
 Both `.env.compose` and `.env` are ignored by Git. Do not commit secrets or database credentials.
@@ -266,7 +275,7 @@ The development services are exposed only on the local machine:
 - API: [http://localhost:8000](http://localhost:8000)
 - Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-The database uses the named `postgres_data` volume, while `frontend_node_modules` keeps container-installed frontend dependencies separate from the host bind mount.
+The database uses the named `postgres_data` volume, while `frontend_node_modules` keeps container-installed frontend dependencies separate from the host bind mount. Redis is an internal, non-persistent cache service. The API reaches it through `redis://redis:6379/0`; `localhost` inside the API container would refer to the API container itself.
 
 ### 3. Apply migrations
 
@@ -286,7 +295,7 @@ Use `docker compose --env-file .env.compose down -v` only when you intentionally
 
 ## Run the Authenticated Application Manually
 
-Authenticated mode requires PostgreSQL, FastAPI, and the React frontend.
+Authenticated mode requires PostgreSQL, FastAPI, and the React frontend. A local Redis server enables task-list caching, but Redis outages do not prevent PostgreSQL-backed task operations.
 
 ### 1. Configure PostgreSQL and environment variables
 
@@ -298,11 +307,14 @@ JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 DATABASE_URL=postgresql+psycopg://<user>:<password>@localhost:5432/<database>
 ALLOWED_ORIGINS=http://localhost:5173
+REDIS_URL=redis://127.0.0.1:6379/0
+CACHE_KEY_PREFIX=kanban:v1
+CACHE_TASK_LIST_TTL_SECONDS=30
 ```
 
 The real `.env` file is ignored by Git. Never commit JWT secrets or database credentials.
 
-`JWT_ALGORITHM` and `ACCESS_TOKEN_EXPIRE_MINUTES` are configuration values. HS256 and 30 minutes above are example local settings, not hard-coded token behavior. `ALLOWED_ORIGINS` accepts a comma-separated list and defaults to `http://localhost:5173` when omitted.
+`JWT_ALGORITHM` and `ACCESS_TOKEN_EXPIRE_MINUTES` are configuration values. HS256 and 30 minutes above are example local settings, not hard-coded token behavior. `ALLOWED_ORIGINS` accepts a comma-separated list and defaults to `http://localhost:5173` when omitted. The cache defaults to the Redis URL, versioned prefix, and 30-second task-list TTL shown above. Use `127.0.0.1` for a backend running on the host; Compose overrides this with the `redis` service hostname.
 
 ### 2. Install and migrate the backend
 
@@ -452,7 +464,7 @@ The server assigns `id`, the initial `To Do` status, the creation timestamp, and
 
 #### Current task response
 
-Task routes currently return raw ORM objects without an explicit response model. The current wire format is therefore snake_case:
+Task routes use explicit response models while preserving the current snake_case wire format:
 
 ```json
 {
@@ -509,8 +521,12 @@ JWT in sessionStorage["access_token"]
     ↓ GET /users/me on session restoration
 Authenticated board
     ↓ GET /tasks/
-FastAPI → SQLAlchemy → PostgreSQL
+FastAPI → Redis task-list cache
+             ↓ miss or unavailable
+          SQLAlchemy → PostgreSQL
 ```
+
+Only the owner-scoped task collection is cached; current-user resolution and individual task retrieval remain database-backed. Each user has a Redis generation token, and a successful task mutation rotates that token after the PostgreSQL commit. Late readers can only populate the old generation, so later requests do not consume their stale snapshot. Redis failures are logged and fail open to PostgreSQL; if generation rotation cannot reach Redis, an existing cached list can remain stale only until its short TTL expires.
 
 ### Authenticated write paths
 
@@ -652,6 +668,7 @@ Never set `POSTGRES_TEST_DATABASE_URL` to a development or production database: 
 - [x] Repair the account-deletion cascade test.
 - [x] Add PostgreSQL service-container and Alembic migration checks to CI.
 - [x] Run a selected backend integration subset against PostgreSQL.
+- [x] Add fail-open, generation-versioned Redis caching for owner-scoped task lists.
 
 ### Next steps
 
@@ -672,7 +689,7 @@ Never set `POSTGRES_TEST_DATABASE_URL` to a development or production database: 
 - Login failures are visible, but network and server errors currently use the same “Invalid email or password” message as rejected credentials.
 - Profile updates and account deletion do not currently display success or failure notifications.
 - Some startup failures can leave the frontend on its checking state.
-- Task routes do not enforce explicit response models and currently return snake_case ORM fields while request models use camelCase.
+- Task response models intentionally preserve snake_case fields while request models still use camelCase.
 - The complete backend suite still runs only on SQLite; the PostgreSQL CI lane intentionally repeats a six-test integration subset and does not test migration downgrade paths.
 - Frontend automated tests are absent even though lint and the production build now pass.
 - The Compose stack is for development only, runs Uvicorn and Vite development servers, and requires a separate Alembic migration command.

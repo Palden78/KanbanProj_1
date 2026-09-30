@@ -1,5 +1,5 @@
-import uuid 
-from datetime import datetime, timezone 
+import uuid
+
 from models.models import TaskDraft as td, TaskUpdate as T_update, TaskResponse
 from models.userModels import UserResponse
 from sqlalchemy.orm import Session
@@ -7,7 +7,14 @@ from db.orm_models import Task
 from pydantic import TypeAdapter
 from redis import Redis
 from core.config import CACHE_KEY_PREFIX, CACHE_TASK_LIST_TTL_SECONDS
-from cacheService import get_cached_value,delete_cached_values,task_list_key, set_cached_value, task_key
+from services.cacheService import (
+    delete_cached_values,
+    get_cached_value,
+    get_or_create_task_list_generation,
+    rotate_task_list_generation,
+    set_cached_value,
+    task_list_key,
+)
 
 task_list_adapter = TypeAdapter(list[TaskResponse])
 
@@ -42,30 +49,35 @@ def createNewTask(task: td, current_user: UserResponse, db:Session, cache:Redis)
     db.commit()
     db.refresh(db_task)
 
-    delete_cached_values(
-        cache, 
-        task_list_key(
-            CACHE_KEY_PREFIX,
-            current_user.id
-        )
+    rotate_task_list_generation(
+        cache,
+        CACHE_KEY_PREFIX,
+        current_user.id,
     )
 
-    return TaskResponse.model_validate(task)
+    return TaskResponse.model_validate(db_task)
 
 
 def getAllTasks(current_user: UserResponse, db: Session, cache: Redis) -> list[TaskResponse]:
+    generation = get_or_create_task_list_generation(
+        cache,
+        CACHE_KEY_PREFIX,
+        current_user.id,
+    )
+    key = None
 
-    key = task_list_key(CACHE_KEY_PREFIX, current_user.id)
-    cached = get_cached_value(cache, key)
+    if generation is not None:
+        key = task_list_key(CACHE_KEY_PREFIX, current_user.id, generation)
+        cached = get_cached_value(cache, key)
 
-    if cached is not None:
-        try:
-            tasks = task_list_adapter.validate_json(cached)
+        if cached is not None:
+            try:
+                tasks = task_list_adapter.validate_json(cached)
 
-            if all(task.user_id == current_user.id for task in tasks):
-                return tasks
-        except ValueError:
-            delete_cached_values(cache, key)
+                if all(task.user_id == current_user.id for task in tasks):
+                    return tasks
+            except ValueError:
+                delete_cached_values(cache, key)
 
     records = (
         db.query(Task)
@@ -74,14 +86,15 @@ def getAllTasks(current_user: UserResponse, db: Session, cache: Redis) -> list[T
         .all()
     )
 
-    tasks = [ TaskResponse.model_validate(record) for record in records]
+    tasks = [TaskResponse.model_validate(record) for record in records]
 
-    set_cached_value(
-        cache,
-        key,
-        task_list_adapter.dump_json(tasks).decode(),
-        CACHE_TASK_LIST_TTL_SECONDS,
-    )
+    if key is not None:
+        set_cached_value(
+            cache,
+            key,
+            task_list_adapter.dump_json(tasks).decode(),
+            CACHE_TASK_LIST_TTL_SECONDS,
+        )
 
     return tasks
 
@@ -111,16 +124,10 @@ def updateTask(id: str, task_update: T_update, current_user: UserResponse, db:Se
     db.commit()
     db.refresh(taskToupdate)
 
-    delete_cached_values(
-        cache, 
-        task_list_key(
-            CACHE_KEY_PREFIX,
-            current_user.id
-        ),
-        task_key(
-            CACHE_KEY_PREFIX, current_user.id,
-            taskToupdate.id
-        )
+    rotate_task_list_generation(
+        cache,
+        CACHE_KEY_PREFIX,
+        current_user.id,
     )
     return TaskResponse.model_validate(taskToupdate)
 
@@ -131,13 +138,11 @@ def deleteTaskByID(id: str, current_user: UserResponse, db:Session, cache:Redis)
     if verdict in ("unauthorized access", "not found"):
         return verdict
 
-    taskID = taskToDel.id
-    
     db.delete(taskToDel)
     db.commit()
-    delete_cached_values(
+    rotate_task_list_generation(
         cache,
-        task_list_key(CACHE_KEY_PREFIX, current_user.id),
-        task_key(CACHE_KEY_PREFIX, current_user.id, taskID),
+        CACHE_KEY_PREFIX,
+        current_user.id,
     )
     return taskToDel
