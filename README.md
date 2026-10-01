@@ -9,7 +9,7 @@ The project has two frontend experiences:
 
 The repository can be run with local Node.js, Python, PostgreSQL, and Redis processes or as a Docker Compose development stack.
 
-_Last updated: September 30, 2026._
+_Last updated: October 1, 2026._
 
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
@@ -186,7 +186,7 @@ KanbanProj_1/
 │   │   ├── taskService.py             # Owner-scoped SQLAlchemy and cached task operations
 │   │   └── userService.py             # SQLAlchemy user operations
 │   ├── tests/
-│   │   ├── conftest.py                # SQLite test database and app overrides
+│   │   ├── conftest.py                # SQLite/PostgreSQL fixtures plus DB and FakeRedis overrides
 │   │   ├── test_auth.py               # Authentication tests
 │   │   ├── test_ownership.py          # Task ownership tests
 │   │   └── test_cascade.py            # Account-deletion cascade test
@@ -275,7 +275,7 @@ The development services are exposed only on the local machine:
 - API: [http://localhost:8000](http://localhost:8000)
 - Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-The database uses the named `postgres_data` volume, while `frontend_node_modules` keeps container-installed frontend dependencies separate from the host bind mount. Redis is an internal, non-persistent cache service. The API reaches it through `redis://redis:6379/0`; `localhost` inside the API container would refer to the API container itself.
+The database uses the named `postgres_data` volume, while `frontend_node_modules` keeps container-installed frontend dependencies separate from the host bind mount. Redis is an internal, non-persistent cache service with a 128 MB limit and `allkeys-lru` eviction. The API reaches it through `redis://redis:6379/0`; `localhost` inside the API container would refer to the API container itself. Compose waits for PostgreSQL and Redis health checks before starting the API. The cache's fail-open behavior applies to Redis failures during request handling after startup; it does not bypass this initial Compose dependency gate.
 
 ### 3. Apply migrations
 
@@ -314,7 +314,7 @@ CACHE_TASK_LIST_TTL_SECONDS=30
 
 The real `.env` file is ignored by Git. Never commit JWT secrets or database credentials.
 
-`JWT_ALGORITHM` and `ACCESS_TOKEN_EXPIRE_MINUTES` are configuration values. HS256 and 30 minutes above are example local settings, not hard-coded token behavior. `ALLOWED_ORIGINS` accepts a comma-separated list and defaults to `http://localhost:5173` when omitted. The cache defaults to the Redis URL, versioned prefix, and 30-second task-list TTL shown above. Use `127.0.0.1` for a backend running on the host; Compose overrides this with the `redis` service hostname.
+`JWT_ALGORITHM` and `ACCESS_TOKEN_EXPIRE_MINUTES` are configuration values. HS256 and 30 minutes above are example local settings, not hard-coded token behavior. `ALLOWED_ORIGINS` accepts a comma-separated list and defaults to `http://localhost:5173` when omitted. The cache defaults to `redis://127.0.0.1:6379/0`, the `kanban:v1` key prefix, and a 30-second task-list TTL. Blank `REDIS_URL` or `CACHE_KEY_PREFIX` values prevent startup, and `CACHE_TASK_LIST_TTL_SECONDS` must be a positive integer. Use `127.0.0.1` for a backend running on the host; Compose overrides this with the `redis` service hostname.
 
 ### 2. Install and migrate the backend
 
@@ -477,7 +477,7 @@ Task routes use explicit response models while preserving the current snake_case
 }
 ```
 
-`GET /tasks/` returns a direct array of these objects. The frontend `AuthUserTask` type currently follows this snake_case response.
+`GET /tasks/` returns a direct array of these objects, ordered by `created_at` and then `id` for deterministic results. The frontend `AuthUserTask` type currently follows this snake_case response.
 
 A partial update can change `taskName`, `description`, or `status`, but not ownership:
 
@@ -603,15 +603,17 @@ The test harness has two database modes:
 - The default mode runs all nine tests against in-memory SQLite with foreign-key enforcement and uses `Base.metadata.create_all()`/`drop_all()` for fast per-test schema isolation.
 - The PostgreSQL mode is explicitly enabled with `POSTGRES_TEST_DATABASE_URL`, requires a dedicated database named `kanban_test`, and uses only the schema created by Alembic. It truncates application rows between tests while preserving `alembic_version`.
 - Both modes override FastAPI's `get_db` dependency so requests use the selected test session.
+- Both modes also override `get_cache` with an in-process `fakeredis.FakeRedis` instance, so the backend tests do not require a separately running Redis server.
 - The `postgresql` marker means “also run this test in the PostgreSQL lane”; marked tests remain part of the complete SQLite suite.
 
-The latest verified backend runs on September 25, 2026 completed with **9 passing SQLite tests** and **6 passing PostgreSQL tests**. A fresh PostgreSQL database also passed `alembic upgrade head` and `alembic check` with no new upgrade operations detected.
+The latest verified backend runs on September 25, 2026 completed with **9 passing SQLite tests** and **6 passing PostgreSQL tests**. A fresh PostgreSQL database also passed `alembic upgrade head` and `alembic check` with no new upgrade operations detected. This remains the last verified baseline and predates the Redis cache changes.
 
 The suite is green, but its coverage and dependency setup still need improvement:
 
 - `pytest` is installed explicitly by CI but is not yet declared in a backend development dependency manifest.
 - Cross-user PATCH and DELETE tests are currently absent.
-- Both runs report one Starlette/httpx deprecation warning and one Pydantic field-argument deprecation warning.
+- Existing requests exercise the cache dependency, but dedicated cache hit/miss, generation invalidation, TTL expiry, malformed-value, and Redis-outage assertions are still absent.
+- Both verified runs reported one Starlette/httpx deprecation warning and one Pydantic field-argument deprecation warning.
 - No frontend test runner or frontend tests are configured.
 
 If pytest is installed in the active backend environment, run the complete SQLite suite from `backend/` with:
